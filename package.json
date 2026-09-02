@@ -1,0 +1,24 @@
+{
+  "name": "webdev3_gansonkari",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GansonKari-FS/webDev3_GansonKari.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/GansonKari-FS/webDev3_GansonKari/issues"
+  },
+  "homepage": "https://github.com/GansonKari-FS/webDev3_GansonKari#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
