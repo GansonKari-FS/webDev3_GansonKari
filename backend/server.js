@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const sequelize = require("./database/database");
 const User = require("./models/User");
@@ -13,14 +14,17 @@ const PORT = process.env.PORT || 3001;
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const SPOTIFY_REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Temporary storage for OAuth state values.
-// This helps protect the Spotify login flow.
+// Temporary storage for OAuth state values
 const oauthStates = new Set();
 
 app.use(express.json());
 
+// ======================================================
 // HOME ROUTE
+// ======================================================
+
 app.get("/", (req, res) => {
   res.json({
     message: "Spotify Music Search API is running!",
@@ -52,7 +56,7 @@ app.get("/login", (req, res) => {
   res.redirect(spotifyAuthorizationUrl);
 });
 
-// STEP 2: Spotify sends user back here
+// STEP 2: Spotify callback route
 app.get("/callback", async (req, res) => {
   const code = req.query.code;
   const state = req.query.state;
@@ -80,6 +84,7 @@ app.get("/callback", async (req, res) => {
   oauthStates.delete(state);
 
   try {
+    // Create Basic Authorization header for Spotify
     const authHeader = Buffer.from(
       `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`,
     ).toString("base64");
@@ -90,6 +95,7 @@ app.get("/callback", async (req, res) => {
       redirect_uri: SPOTIFY_REDIRECT_URI,
     });
 
+    // Exchange authorization code for Spotify tokens
     const tokenResponse = await axios.post(
       "https://accounts.spotify.com/api/token",
       tokenBody.toString(),
@@ -105,7 +111,7 @@ app.get("/callback", async (req, res) => {
     const refreshToken = tokenResponse.data.refresh_token;
     const expiresIn = tokenResponse.data.expires_in;
 
-    // Get the authenticated Spotify user's profile
+    // Get Spotify user profile
     const profileResponse = await axios.get("https://api.spotify.com/v1/me", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -114,21 +120,63 @@ app.get("/callback", async (req, res) => {
 
     const spotifyUser = profileResponse.data;
 
-    // For Issue #15 we confirm OAuth works.
-    // In Issue #16 we will store authentication/JWT data
-    // in the database instead of returning sensitive tokens.
+    // Calculate Spotify token expiration time
+    const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    // Find existing user by Spotify ID
+    let user = await User.findOne({
+      where: {
+        spotifyId: spotifyUser.id,
+      },
+    });
+
+    // Create user if they do not exist
+    if (!user) {
+      user = await User.create({
+        spotifyId: spotifyUser.id,
+        displayName: spotifyUser.display_name || "Spotify User",
+        email: spotifyUser.email || null,
+        accessToken: accessToken,
+        refreshToken: refreshToken || null,
+        tokenExpiresAt: tokenExpiresAt,
+      });
+    } else {
+      // Update existing user's Spotify authentication data
+      await user.update({
+        displayName: spotifyUser.display_name || user.displayName,
+        email: spotifyUser.email || user.email,
+        accessToken: accessToken,
+        refreshToken: refreshToken || user.refreshToken,
+        tokenExpiresAt: tokenExpiresAt,
+      });
+    }
+
+    // Create application JWT
+    const appJwt = jwt.sign(
+      {
+        userId: user.id,
+        spotifyId: user.spotifyId,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: "1h",
+      },
+    );
+
+    // Save JWT in database
+    await user.update({
+      jwtToken: appJwt,
+    });
 
     res.status(200).json({
       message: "Spotify authentication successful!",
       user: {
-        spotifyId: spotifyUser.id,
-        displayName: spotifyUser.display_name,
-        email: spotifyUser.email,
+        id: user.id,
+        spotifyId: user.spotifyId,
+        displayName: user.displayName,
+        email: user.email,
       },
-      tokenInfo: {
-        expiresIn: expiresIn,
-        refreshTokenReceived: Boolean(refreshToken),
-      },
+      jwtCreated: true,
     });
   } catch (error) {
     console.error(
@@ -245,7 +293,10 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log("Database connection successful!");
 
-    await sequelize.sync();
+    await sequelize.sync({
+      alter: true,
+    });
+
     console.log("Database synchronized!");
 
     app.listen(PORT, () => {
