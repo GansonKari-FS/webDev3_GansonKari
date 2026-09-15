@@ -41,7 +41,12 @@ app.get("/login", (req, res) => {
 
   oauthStates.add(state);
 
-  const scope = ["user-read-private", "user-read-email"].join(" ");
+  const scope = [
+    "user-read-private",
+    "user-read-email",
+    "user-top-read",
+    "user-read-recently-played",
+  ].join(" ");
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -280,6 +285,116 @@ app.delete("/users/:id", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: error.message,
+    });
+  }
+});
+
+// ======================================================
+// CUSTOM SPOTIFY API ROUTES
+// ======================================================
+
+// GET Spotify profile for a saved user
+app.get("/api/spotify/profile/:userId", async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.userId);
+
+    if (!user || !user.accessToken) {
+      return res.status(404).json({
+        message: "Spotify user or access token not found.",
+      });
+    }
+
+    const response = await axios.get("https://api.spotify.com/v1/me", {
+      headers: {
+        Authorization: `Bearer ${user.accessToken}`,
+      },
+    });
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(
+      "Spotify profile error:",
+      error.response?.data || error.message,
+    );
+
+    res.status(error.response?.status || 500).json({
+      message: "Unable to retrieve Spotify profile.",
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+// GET user's top Spotify tracks
+app.get("/api/spotify/top-tracks/:userId", async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.userId);
+
+    if (!user || !user.accessToken) {
+      return res.status(404).json({
+        message: "Spotify user or access token not found.",
+      });
+    }
+
+    const response = await axios.get(
+      "https://api.spotify.com/v1/me/top/tracks",
+      {
+        headers: {
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        params: {
+          limit: 10,
+          time_range: "medium_term",
+        },
+      },
+    );
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(
+      "Spotify top tracks error:",
+      error.response?.data || error.message,
+    );
+
+    res.status(error.response?.status || 500).json({
+      message: "Unable to retrieve top Spotify tracks.",
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+// GET user's recently played Spotify tracks
+app.get("/api/spotify/recently-played/:userId", async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.userId);
+
+    if (!user || !user.accessToken) {
+      return res.status(404).json({
+        message: "Spotify user or access token not found.",
+      });
+    }
+
+    const response = await axios.get(
+      "https://api.spotify.com/v1/me/player/recently-played",
+      {
+        headers: {
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        params: {
+          limit: 10,
+        },
+      },
+    );
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(
+      "Spotify recently played error:",
+      error.response?.data || error.message,
+    );
+
+    res.status(error.response?.status || 500).json({
+      message: "Unable to retrieve recently played Spotify tracks.",
+      error: error.response?.data || error.message,
     });
   }
 });
