@@ -483,6 +483,70 @@ app.get("/api/spotify/recently-played/:userId", async (req, res) => {
 });
 
 // ======================================================
+// JWT AUTHENTICATION STATUS VALIDATION
+// ======================================================
+
+// Check whether a user's application JWT is valid
+app.get("/auth/status/:userId", async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        authenticated: false,
+        message: "User not found.",
+      });
+    }
+
+    if (!user.jwtToken) {
+      return res.status(401).json({
+        authenticated: false,
+        message: "No JWT token found for this user.",
+      });
+    }
+
+    try {
+      const decoded = jwt.verify(user.jwtToken, JWT_SECRET);
+
+      return res.status(200).json({
+        authenticated: true,
+        message: "JWT is valid.",
+        user: {
+          id: user.id,
+          spotifyId: user.spotifyId,
+          displayName: user.displayName,
+          email: user.email,
+        },
+        token: {
+          issuedAt: decoded.iat,
+          expiresAt: decoded.exp,
+        },
+      });
+    } catch (jwtError) {
+      if (jwtError.name === "TokenExpiredError") {
+        return res.status(401).json({
+          authenticated: false,
+          message: "JWT has expired.",
+        });
+      }
+
+      return res.status(401).json({
+        authenticated: false,
+        message: "JWT is invalid.",
+      });
+    }
+  } catch (error) {
+    console.error("JWT status validation error:", error.message);
+
+    return res.status(500).json({
+      authenticated: false,
+      message: "Unable to validate JWT authentication status.",
+      error: error.message,
+    });
+  }
+});
+
+// ======================================================
 // START SERVER
 // ======================================================
 
