@@ -89,7 +89,6 @@ app.get("/callback", async (req, res) => {
   oauthStates.delete(state);
 
   try {
-    // Create Basic Authorization header for Spotify
     const authHeader = Buffer.from(
       `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`,
     ).toString("base64");
@@ -125,7 +124,7 @@ app.get("/callback", async (req, res) => {
 
     const spotifyUser = profileResponse.data;
 
-    // Calculate Spotify token expiration time
+    // Calculate Spotify access token expiration time
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
 
     // Find existing user by Spotify ID
@@ -146,7 +145,7 @@ app.get("/callback", async (req, res) => {
         tokenExpiresAt: tokenExpiresAt,
       });
     } else {
-      // Update existing user's Spotify authentication data
+      // Update existing Spotify authentication data
       await user.update({
         displayName: spotifyUser.display_name || user.displayName,
         email: spotifyUser.email || user.email,
@@ -168,7 +167,7 @@ app.get("/callback", async (req, res) => {
       },
     );
 
-    // Save JWT in database
+    // Save application JWT in database
     await user.update({
       jwtToken: appJwt,
     });
@@ -195,6 +194,84 @@ app.get("/callback", async (req, res) => {
     });
   }
 });
+
+// ======================================================
+// SPOTIFY TOKEN REFRESH
+// ======================================================
+
+// Refresh a user's Spotify access token
+const refreshSpotifyToken = async (user) => {
+  if (!user.refreshToken) {
+    throw new Error("No Spotify refresh token is available for this user.");
+  }
+
+  const authHeader = Buffer.from(
+    `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`,
+  ).toString("base64");
+
+  const tokenBody = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: user.refreshToken,
+  });
+
+  const tokenResponse = await axios.post(
+    "https://accounts.spotify.com/api/token",
+    tokenBody.toString(),
+    {
+      headers: {
+        Authorization: `Basic ${authHeader}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    },
+  );
+
+  const newAccessToken = tokenResponse.data.access_token;
+
+  const expiresIn = tokenResponse.data.expires_in;
+
+  const newExpirationTime = new Date(Date.now() + expiresIn * 1000);
+
+  // Spotify may or may not send a new refresh token
+  const newRefreshToken = tokenResponse.data.refresh_token || user.refreshToken;
+
+  await user.update({
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+    tokenExpiresAt: newExpirationTime,
+  });
+
+  console.log(`Spotify access token refreshed for user ${user.id}`);
+
+  return newAccessToken;
+};
+
+// Check whether a user's Spotify access token needs refreshing
+const getValidSpotifyAccessToken = async (user) => {
+  if (!user.accessToken) {
+    throw new Error("No Spotify access token is available for this user.");
+  }
+
+  if (!user.tokenExpiresAt) {
+    return user.accessToken;
+  }
+
+  const expirationTime = new Date(user.tokenExpiresAt).getTime();
+
+  const currentTime = Date.now();
+
+  // Refresh slightly before expiration
+  const refreshBuffer = 60 * 1000;
+
+  if (currentTime >= expirationTime - refreshBuffer) {
+    console.log(
+      `Spotify access token expired or is about to expire for user ${user.id}.`,
+    );
+
+    return await refreshSpotifyToken(user);
+  }
+
+  return user.accessToken;
+};
 
 // ======================================================
 // USER CRUD ROUTES
@@ -298,15 +375,17 @@ app.get("/api/spotify/profile/:userId", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
 
-    if (!user || !user.accessToken) {
+    if (!user) {
       return res.status(404).json({
-        message: "Spotify user or access token not found.",
+        message: "Spotify user not found.",
       });
     }
 
+    const accessToken = await getValidSpotifyAccessToken(user);
+
     const response = await axios.get("https://api.spotify.com/v1/me", {
       headers: {
-        Authorization: `Bearer ${user.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
@@ -329,17 +408,19 @@ app.get("/api/spotify/top-tracks/:userId", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
 
-    if (!user || !user.accessToken) {
+    if (!user) {
       return res.status(404).json({
-        message: "Spotify user or access token not found.",
+        message: "Spotify user not found.",
       });
     }
+
+    const accessToken = await getValidSpotifyAccessToken(user);
 
     const response = await axios.get(
       "https://api.spotify.com/v1/me/top/tracks",
       {
         headers: {
-          Authorization: `Bearer ${user.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         params: {
           limit: 10,
@@ -367,17 +448,19 @@ app.get("/api/spotify/recently-played/:userId", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
 
-    if (!user || !user.accessToken) {
+    if (!user) {
       return res.status(404).json({
-        message: "Spotify user or access token not found.",
+        message: "Spotify user not found.",
       });
     }
+
+    const accessToken = await getValidSpotifyAccessToken(user);
 
     const response = await axios.get(
       "https://api.spotify.com/v1/me/player/recently-played",
       {
         headers: {
-          Authorization: `Bearer ${user.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         params: {
           limit: 10,
@@ -406,6 +489,7 @@ app.get("/api/spotify/recently-played/:userId", async (req, res) => {
 const startServer = async () => {
   try {
     await sequelize.authenticate();
+
     console.log("Database connection successful!");
 
     await sequelize.sync({
@@ -416,6 +500,7 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
+
       console.log(`Spotify login available at http://127.0.0.1:${PORT}/login`);
     });
   } catch (error) {
