@@ -1,6 +1,6 @@
 /* =========================================
    SPOTIFY MUSIC SEARCH
-   WEEK 4 FINAL FRONTEND
+   WEEK 4 DASHBOARD
 ========================================= */
 
 * {
@@ -15,6 +15,7 @@
   --background: #121212;
   --surface: #181818;
   --surface-light: #242424;
+  --surface-hover: #2a2a2a;
   --text-primary: #ffffff;
   --text-secondary: #b3b3b3;
   --border: #333333;
@@ -29,12 +30,7 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
-  background: radial-gradient(
-    circle at top,
-    #1d3325 0%,
-    #121212 35%,
-    #090909 100%
-  );
+  background: #090909;
   color: var(--text-primary);
 }
 
@@ -65,6 +61,12 @@ a {
   justify-content: center;
   align-items: center;
   padding: 30px 20px;
+  background: radial-gradient(
+    circle at top,
+    #1d3325 0%,
+    #121212 35%,
+    #090909 100%
+  );
 }
 
 .login-card {
@@ -160,52 +162,384 @@ a {
 }
 
 /* =========================================
-   AUTHENTICATED APPLICATION
+   DASHBOARD LAYOUT
 ========================================= */
 
-.app-page {
-  width: min(1200px, calc(100% - 40px));
-  margin: 0 auto;
-  padding: 45px 0 70px;
+.dashboard-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background:
+    radial-gradient(circle at top right, #173b24 0%, transparent 32%), #090909;
 }
 
-.app-header {
+/* =========================================
+   SIDEBAR
+========================================= */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  padding: 28px 20px;
+  background: #111111;
+  border-right: 1px solid #282828;
+}
+
+.sidebar-brand {
+  display: flex;
   align-items: center;
-  gap: 25px;
-  margin-bottom: 35px;
-  padding: 30px;
-  background: linear-gradient(135deg, #1f3d29, #181818 70%);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  gap: 13px;
+  padding: 0 8px 28px;
+  border-bottom: 1px solid #282828;
 }
 
-.app-header h1 {
-  font-size: clamp(1.8rem, 5vw, 2.8rem);
-}
-
-.logout-btn {
+.sidebar-logo {
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
-  padding: 12px 22px;
-  border: 1px solid #777777;
-  border-radius: 999px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  background: var(--spotify-green);
+  color: #000000;
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.sidebar-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.sidebar-subtitle {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 30px;
+}
+
+.nav-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+  border: none;
+  border-radius: 10px;
   background: transparent;
-  color: white;
+  color: var(--text-secondary);
+  text-align: left;
   font-weight: 700;
   transition:
     background 0.2s ease,
     color 0.2s ease,
-    border-color 0.2s ease,
     transform 0.2s ease;
 }
 
+.nav-link span {
+  width: 22px;
+  color: inherit;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.nav-link:hover {
+  background: #202020;
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.nav-link.active {
+  background: #242424;
+  color: var(--spotify-green);
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 22px;
+  border-top: 1px solid #282828;
+}
+
+.mini-profile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 18px;
+}
+
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--spotify-green), #0b8d3d);
+  color: #000000;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.mini-profile-info {
+  min-width: 0;
+}
+
+.mini-profile-info p {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-profile-info span {
+  display: block;
+  margin-top: 3px;
+  color: #777777;
+  font-size: 0.7rem;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 11px 18px;
+  border: 1px solid #555555;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  font-weight: 700;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
 .logout-btn:hover {
-  border-color: white;
-  background: white;
-  color: black;
-  transform: translateY(-1px);
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #000000;
+}
+
+/* =========================================
+   DASHBOARD MAIN
+========================================= */
+
+.dashboard-main {
+  min-width: 0;
+  width: 100%;
+  max-width: 1450px;
+  padding: 38px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 30px;
+  padding: 32px;
+  background: linear-gradient(135deg, #1f432d 0%, #181818 70%);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+}
+
+.dashboard-header h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+}
+
+.header-description {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.connection-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  border: 1px solid #31563d;
+  border-radius: 999px;
+  background: rgba(30, 215, 96, 0.08);
+  color: #d7ffe5;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--spotify-green);
+  box-shadow: 0 0 10px rgba(30, 215, 96, 0.65);
+}
+
+/* =========================================
+   STATUS / ERRORS
+========================================= */
+
+.dashboard-status {
+  margin-bottom: 25px;
+  padding: 15px 18px;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+.dashboard-status.loading {
+  border: 1px solid #31563d;
+  background: rgba(30, 215, 96, 0.08);
+  color: #d7ffe5;
+}
+
+.dashboard-status.error {
+  border: 1px solid #743c3c;
+  background: rgba(200, 60, 60, 0.12);
+  color: #ffbaba;
+}
+
+.error-message {
+  color: #ffbaba;
+}
+
+/* =========================================
+   CONTENT SECTIONS
+========================================= */
+
+.content-section {
+  width: 100%;
+}
+
+.section-heading {
+  margin-bottom: 22px;
+}
+
+.section-heading h2 {
+  margin-bottom: 7px;
+  font-size: 1.7rem;
+}
+
+.section-heading p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* =========================================
+   DASHBOARD CARDS
+========================================= */
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.dashboard-card {
+  min-width: 0;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+  background: #1e1e1e;
+  border-color: #414141;
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+}
+
+.dashboard-card-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 22px;
+  border-radius: 50%;
+  background: var(--spotify-green);
+  color: #000000;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.dashboard-card h3 {
+  margin-bottom: 10px;
+  font-size: 1.15rem;
+}
+
+.dashboard-card p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.dashboard-card strong {
+  color: #ffffff;
+}
+
+.card-action-btn {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 11px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--spotify-green);
+  color: #000000;
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.card-action-btn:hover {
+  background: var(--spotify-green-hover);
+  transform: scale(1.03);
+}
+
+.connected-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 9px 13px;
+  border: 1px solid #31563d;
+  border-radius: 999px;
+  color: #d7ffe5;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.profile-status-text {
+  margin-top: auto;
+  padding-top: 20px;
+  color: var(--spotify-green) !important;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 /* =========================================
@@ -218,20 +552,6 @@ a {
   border: 1px solid var(--border);
   border-radius: 22px;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-}
-
-.section-heading {
-  margin-bottom: 22px;
-}
-
-.section-heading h2 {
-  margin-bottom: 7px;
-  font-size: 1.6rem;
-}
-
-.section-heading p {
-  color: var(--text-secondary);
-  line-height: 1.5;
 }
 
 #searchForm {
@@ -247,7 +567,7 @@ a {
   border-radius: 999px;
   outline: none;
   background: #2a2a2a;
-  color: white;
+  color: #ffffff;
   transition:
     border 0.2s ease,
     background 0.2s ease,
@@ -269,7 +589,7 @@ a {
   border: none;
   border-radius: 999px;
   background: var(--spotify-green);
-  color: black;
+  color: #000000;
   font-weight: 800;
   transition:
     background 0.2s ease,
@@ -279,10 +599,6 @@ a {
 #searchForm button:hover {
   background: var(--spotify-green-hover);
   transform: scale(1.03);
-}
-
-#searchForm button:active {
-  transform: scale(0.97);
 }
 
 /* =========================================
@@ -343,6 +659,19 @@ a {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
 }
 
+.track-image-placeholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+  border-radius: 10px;
+  background: #282828;
+  color: var(--spotify-green);
+  font-size: 3rem;
+}
+
 .track-info {
   display: flex;
   flex: 1;
@@ -399,10 +728,6 @@ a {
   box-shadow: 0 7px 20px rgba(30, 215, 96, 0.18);
 }
 
-.spotify-link:active {
-  transform: translateY(0);
-}
-
 /* =========================================
    ACCESSIBILITY
 ========================================= */
@@ -430,7 +755,67 @@ a:focus-visible {
    RESPONSIVE - TABLET
 ========================================= */
 
+@media (max-width: 1000px) {
+  .dashboard-layout {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+
+  .dashboard-main {
+    padding: 28px;
+  }
+
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 800px) {
+  .dashboard-layout {
+    display: block;
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 18px;
+    border-right: none;
+    border-bottom: 1px solid #282828;
+  }
+
+  .sidebar-brand {
+    padding-bottom: 18px;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    margin-top: 18px;
+  }
+
+  .nav-link {
+    justify-content: center;
+  }
+
+  .sidebar-bottom {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 18px;
+  }
+
+  .mini-profile {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .logout-btn {
+    width: auto;
+  }
+
+  .dashboard-main {
+    padding: 24px;
+  }
+
   .track-grid {
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   }
@@ -445,15 +830,23 @@ a:focus-visible {
     padding: 40px 25px;
   }
 
-  .app-page {
-    width: min(100% - 24px, 1200px);
-    padding-top: 20px;
+  .dashboard-main {
+    padding: 18px 12px 40px;
   }
 
-  .app-header {
+  .dashboard-header {
     align-items: flex-start;
     flex-direction: column;
     padding: 24px;
+  }
+
+  .connection-status {
+    align-self: flex-start;
+  }
+
+  .sidebar-bottom {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .logout-btn {
@@ -492,6 +885,23 @@ a:focus-visible {
 ========================================= */
 
 @media (max-width: 420px) {
+  .sidebar-nav {
+    flex-direction: column;
+  }
+
+  .nav-link {
+    justify-content: flex-start;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .dashboard-card {
+    min-height: 230px;
+    padding: 22px;
+  }
+
   .track-grid {
     grid-template-columns: 1fr;
   }

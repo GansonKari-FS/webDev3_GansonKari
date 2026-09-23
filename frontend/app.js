@@ -14,6 +14,16 @@ const logoutButton = document.getElementById("logoutBtn");
 
 const authStatus = document.getElementById("loginStatus");
 const displayName = document.getElementById("displayName");
+const sidebarDisplayName = document.getElementById("sidebarDisplayName");
+const profileDisplayName = document.getElementById("profileDisplayName");
+
+const dashboardStatus = document.getElementById("dashboardStatus");
+
+const dashboardSection = document.getElementById("dashboardSection");
+const searchSection = document.getElementById("searchSection");
+const dashboardSearchBtn = document.getElementById("dashboardSearchBtn");
+
+const navLinks = document.querySelectorAll(".nav-link");
 
 const searchForm = document.getElementById("searchForm");
 const searchInput = document.getElementById("searchInput");
@@ -62,9 +72,106 @@ function showApp(user) {
     appPage.classList.remove("hidden");
   }
 
-  if (displayName && user && user.displayName) {
-    displayName.textContent = user.displayName;
+  const userName = user?.displayName || "Spotify User";
+
+  if (displayName) {
+    displayName.textContent = userName;
   }
+
+  if (sidebarDisplayName) {
+    sidebarDisplayName.textContent = userName;
+  }
+
+  if (profileDisplayName) {
+    profileDisplayName.textContent = userName;
+  }
+
+  showDashboard();
+}
+
+/*
+======================================================
+DASHBOARD STATUS
+======================================================
+*/
+
+function showDashboardStatus(message, type = "loading") {
+  if (!dashboardStatus) {
+    return;
+  }
+
+  dashboardStatus.textContent = message;
+  dashboardStatus.className = `dashboard-status ${type}`;
+}
+
+function hideDashboardStatus() {
+  if (!dashboardStatus) {
+    return;
+  }
+
+  dashboardStatus.textContent = "";
+  dashboardStatus.className = "dashboard-status hidden";
+}
+
+/*
+======================================================
+DASHBOARD NAVIGATION
+======================================================
+*/
+
+function setActiveNavigation(sectionName) {
+  navLinks.forEach((link) => {
+    const isActive = link.dataset.section === sectionName;
+    link.classList.toggle("active", isActive);
+  });
+}
+
+function showDashboard() {
+  if (dashboardSection) {
+    dashboardSection.classList.remove("hidden");
+  }
+
+  if (searchSection) {
+    searchSection.classList.add("hidden");
+  }
+
+  setActiveNavigation("dashboard");
+}
+
+function showSearch() {
+  if (dashboardSection) {
+    dashboardSection.classList.add("hidden");
+  }
+
+  if (searchSection) {
+    searchSection.classList.remove("hidden");
+  }
+
+  setActiveNavigation("search");
+
+  if (searchInput) {
+    searchInput.focus();
+  }
+}
+
+navLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    const section = link.dataset.section;
+
+    if (section === "dashboard") {
+      showDashboard();
+    }
+
+    if (section === "search") {
+      showSearch();
+    }
+  });
+});
+
+if (dashboardSearchBtn) {
+  dashboardSearchBtn.addEventListener("click", () => {
+    showSearch();
+  });
 }
 
 /*
@@ -75,30 +182,15 @@ GET USER ID
 
 function getUserId() {
   const params = new URLSearchParams(window.location.search);
-
   const urlUserId = params.get("userId");
-
-  /*
-  If Spotify redirected us back with a userId,
-  save it so the user stays logged in after refresh.
-  */
 
   if (urlUserId) {
     localStorage.setItem("spotifyUserId", urlUserId);
-
-    /*
-    Remove ?userId=1 from the browser address
-    after we have saved it.
-    */
 
     window.history.replaceState({}, document.title, window.location.pathname);
 
     return urlUserId;
   }
-
-  /*
-  Otherwise use the userId that was already saved.
-  */
 
   return localStorage.getItem("spotifyUserId");
 }
@@ -112,11 +204,6 @@ CHECK AUTHENTICATION
 async function checkAuthentication() {
   currentUserId = getUserId();
 
-  /*
-  If there is no userId yet, the user needs
-  to log in with Spotify.
-  */
-
   if (!currentUserId) {
     showLogin();
     return;
@@ -126,6 +213,8 @@ async function checkAuthentication() {
     if (authStatus) {
       authStatus.textContent = "Checking authentication...";
     }
+
+    showDashboardStatus("Loading your Spotify dashboard...", "loading");
 
     const response = await fetch(
       `${API_URL}/auth/status/${encodeURIComponent(currentUserId)}`,
@@ -138,21 +227,22 @@ async function checkAuthentication() {
 
     if (response.ok && data.authenticated === true) {
       showApp(data.user);
+      hideDashboardStatus();
       return;
     }
 
-    /*
-    If the JWT is missing, invalid, or expired,
-    remove the saved user and return to login.
-    */
-
     localStorage.removeItem("spotifyUserId");
-
     currentUserId = null;
+
+    hideDashboardStatus();
 
     showLogin("Your session has expired. Please log in again.");
   } catch (error) {
     console.error("Authentication check failed:", error);
+
+    currentUserId = null;
+
+    hideDashboardStatus();
 
     showLogin(
       "Unable to verify authentication. Make sure the server is running.",
@@ -192,6 +282,14 @@ if (logoutButton) {
       displayName.textContent = "Spotify User";
     }
 
+    if (sidebarDisplayName) {
+      sidebarDisplayName.textContent = "Spotify User";
+    }
+
+    if (profileDisplayName) {
+      profileDisplayName.textContent = "Spotify User";
+    }
+
     if (searchInput) {
       searchInput.value = "";
     }
@@ -204,6 +302,7 @@ if (logoutButton) {
       `;
     }
 
+    showDashboard();
     showLogin("You have been logged out.");
   });
 }
@@ -220,44 +319,26 @@ if (searchForm) {
 
     const searchTerm = searchInput.value.trim();
 
-    /*
-      Make sure something was entered.
-      */
-
     if (!searchTerm) {
       results.innerHTML = `
-          <p class="welcome-message">
-            Please enter an artist, song, or album.
-          </p>
-        `;
-
-      return;
-    }
-
-    /*
-      Make sure the user is logged in.
-      */
-
-    if (!currentUserId) {
-      results.innerHTML = `
-          <p class="welcome-message">
-            Please log in with Spotify first.
-          </p>
-        `;
-
-      return;
-    }
-
-    /*
-      Display loading message while waiting
-      for Spotify to return results.
-      */
-
-    results.innerHTML = `
         <p class="welcome-message">
-          Searching Spotify...
+          Please enter an artist, song, or album.
         </p>
       `;
+
+      return;
+    }
+
+    if (!currentUserId) {
+      showLogin("Please log in with Spotify first.");
+      return;
+    }
+
+    results.innerHTML = `
+      <p class="welcome-message">
+        Searching Spotify...
+      </p>
+    `;
 
     try {
       const response = await fetch(
@@ -269,113 +350,110 @@ if (searchForm) {
       const data = await response.json();
 
       if (!response.ok) {
+        /*
+        If authentication expired while searching,
+        force the user back to the login screen.
+        */
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem("spotifyUserId");
+          currentUserId = null;
+
+          showLogin("Your Spotify session has expired. Please log in again.");
+
+          return;
+        }
+
         throw new Error(data.message || "Spotify search failed.");
       }
-
-      /*
-        Get the track results returned by Spotify.
-        */
 
       const tracks = data.tracks?.items || [];
 
       if (tracks.length === 0) {
         results.innerHTML = `
-            <p class="welcome-message">
-              No songs found for
-              "${escapeHTML(searchTerm)}".
-            </p>
-          `;
+          <p class="welcome-message">
+            No songs found for "${escapeHTML(searchTerm)}".
+          </p>
+        `;
 
         return;
       }
 
-      /*
-        Build the search result cards.
-        */
-
       results.innerHTML = `
-          <div class="track-grid">
+        <div class="track-grid">
+          ${tracks
+            .map((track) => {
+              const image = track.album?.images?.[0]?.url || "";
 
-            ${tracks
-              .map((track) => {
-                const image = track.album?.images?.[0]?.url || "";
+              const artists =
+                track.artists?.map((artist) => artist.name).join(", ") ||
+                "Unknown Artist";
 
-                const artists =
-                  track.artists?.map((artist) => artist.name).join(", ") ||
-                  "Unknown Artist";
+              const albumName = track.album?.name || "Unknown Album";
 
-                const albumName = track.album?.name || "Unknown Album";
+              const spotifyURL = track.external_urls?.spotify || "";
 
-                const spotifyURL = track.external_urls?.spotify || "";
+              return `
+                <article class="track-card">
+                  ${
+                    image
+                      ? `
+                        <img
+                          src="${escapeHTML(image)}"
+                          alt="${escapeHTML(track.name)} album cover"
+                          class="track-image"
+                        />
+                      `
+                      : `
+                        <div class="track-image-placeholder">
+                          ♫
+                        </div>
+                      `
+                  }
 
-                return `
-                  <article class="track-card">
+                  <div class="track-info">
+                    <h3>${escapeHTML(track.name)}</h3>
+
+                    <p>
+                      <strong>Artist:</strong>
+                      ${escapeHTML(artists)}
+                    </p>
+
+                    <p>
+                      <strong>Album:</strong>
+                      ${escapeHTML(albumName)}
+                    </p>
 
                     ${
-                      image
+                      spotifyURL
                         ? `
-                          <img
-                            src="${escapeHTML(image)}"
-                            alt="${escapeHTML(track.name)} album cover"
-                            class="track-image"
-                          />
+                          <a
+                            href="${escapeHTML(spotifyURL)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="spotify-link"
+                          >
+                            Open in Spotify
+                          </a>
                         `
                         : ""
                     }
-
-                    <div class="track-info">
-
-                      <h3>
-                        ${escapeHTML(track.name)}
-                      </h3>
-
-                      <p>
-                        <strong>
-                          Artist:
-                        </strong>
-                        ${escapeHTML(artists)}
-                      </p>
-
-                      <p>
-                        <strong>
-                          Album:
-                        </strong>
-                        ${escapeHTML(albumName)}
-                      </p>
-
-                      ${
-                        spotifyURL
-                          ? `
-                            <a
-                              href="${escapeHTML(spotifyURL)}"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              class="spotify-link"
-                            >
-                              Open in Spotify
-                            </a>
-                          `
-                          : ""
-                      }
-
-                    </div>
-
-                  </article>
-                `;
-              })
-              .join("")}
-
-          </div>
-        `;
+                  </div>
+                </article>
+              `;
+            })
+            .join("")}
+        </div>
+      `;
     } catch (error) {
       console.error("Spotify search failed:", error);
 
       results.innerHTML = `
-          <p class="welcome-message">
-            Unable to search Spotify:
-            ${escapeHTML(error.message)}
-          </p>
-        `;
+        <p class="welcome-message error-message">
+          Unable to search Spotify:
+          ${escapeHTML(error.message)}
+        </p>
+      `;
     }
   });
 }
