@@ -1,6 +1,6 @@
 /* =========================================
    SPOTIFY MUSIC SEARCH
-   WEEK 4 FRONTEND
+   WEEK 4 FINAL FRONTEND
 ========================================= */
 
 * {
@@ -18,6 +18,10 @@
   --text-primary: #ffffff;
   --text-secondary: #b3b3b3;
   --border: #333333;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -41,6 +45,10 @@ input {
 
 button {
   cursor: pointer;
+}
+
+a {
+  color: inherit;
 }
 
 .hidden {
@@ -91,6 +99,7 @@ button {
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .login-card h1 {
@@ -118,12 +127,14 @@ button {
   font-weight: 800;
   transition:
     transform 0.2s ease,
-    background 0.2s ease;
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .spotify-login-btn:hover {
   background: var(--spotify-green-hover);
   transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(30, 215, 96, 0.2);
 }
 
 .spotify-login-btn:active {
@@ -168,6 +179,7 @@ button {
   background: linear-gradient(135deg, #1f3d29, #181818 70%);
   border: 1px solid var(--border);
   border-radius: 22px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
 }
 
 .app-header h1 {
@@ -182,13 +194,18 @@ button {
   background: transparent;
   color: white;
   font-weight: 700;
-  transition: 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .logout-btn:hover {
   border-color: white;
   background: white;
   color: black;
+  transform: translateY(-1px);
 }
 
 /* =========================================
@@ -200,6 +217,7 @@ button {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 22px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
 }
 
 .section-heading {
@@ -213,6 +231,7 @@ button {
 
 .section-heading p {
   color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 #searchForm {
@@ -231,7 +250,8 @@ button {
   color: white;
   transition:
     border 0.2s ease,
-    background 0.2s ease;
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 #searchInput::placeholder {
@@ -241,6 +261,7 @@ button {
 #searchInput:focus {
   border-color: var(--spotify-green);
   background: #333333;
+  box-shadow: 0 0 0 3px rgba(30, 215, 96, 0.12);
 }
 
 #searchForm button {
@@ -250,10 +271,18 @@ button {
   background: var(--spotify-green);
   color: black;
   font-weight: 800;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 #searchForm button:hover {
   background: var(--spotify-green-hover);
+  transform: scale(1.03);
+}
+
+#searchForm button:active {
+  transform: scale(0.97);
 }
 
 /* =========================================
@@ -275,51 +304,115 @@ button {
 
 .track-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
 }
 
 .track-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   padding: 16px;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 16px;
   transition:
     background 0.2s ease,
     transform 0.2s ease,
-    border 0.2s ease;
+    border 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .track-card:hover {
   background: var(--surface-light);
-  border-color: #333333;
-  transform: translateY(-4px);
+  border-color: #3a3a3a;
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
 }
 
-.track-card img {
+.track-card img,
+.track-image {
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;
+  display: block;
   margin-bottom: 15px;
   border-radius: 10px;
+  background: #282828;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
 }
 
+.track-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 .track-card h3 {
-  margin-bottom: 7px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
   font-size: 1rem;
   line-height: 1.4;
 }
 
 .track-card p {
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
   color: var(--text-secondary);
   font-size: 0.88rem;
   line-height: 1.5;
 }
 
+.track-card p strong {
+  color: #d7d7d7;
+  font-weight: 600;
+}
+
+/* =========================================
+   OPEN IN SPOTIFY BUTTON
+========================================= */
+
+.spotify-link {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--spotify-green);
+  color: #000000;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.spotify-link:hover {
+  background: var(--spotify-green-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(30, 215, 96, 0.18);
+}
+
+.spotify-link:active {
+  transform: translateY(0);
+}
+
 /* =========================================
    ACCESSIBILITY
 ========================================= */
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--spotify-green);
+  outline-offset: 3px;
+}
 
 .sr-only {
   position: absolute;
@@ -334,7 +427,17 @@ button {
 }
 
 /* =========================================
-   RESPONSIVE
+   RESPONSIVE - TABLET
+========================================= */
+
+@media (max-width: 800px) {
+  .track-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  }
+}
+
+/* =========================================
+   RESPONSIVE - MOBILE
 ========================================= */
 
 @media (max-width: 650px) {
@@ -353,6 +456,10 @@ button {
     padding: 24px;
   }
 
+  .logout-btn {
+    width: 100%;
+  }
+
   .search-section {
     padding: 22px;
   }
@@ -363,5 +470,33 @@ button {
 
   #searchForm button {
     width: 100%;
+  }
+
+  .track-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .track-card {
+    padding: 12px;
+  }
+
+  .spotify-link {
+    width: 100%;
+    margin-top: 12px;
+  }
+}
+
+/* =========================================
+   RESPONSIVE - SMALL MOBILE
+========================================= */
+
+@media (max-width: 420px) {
+  .track-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-card h1 {
+    font-size: 2rem;
   }
 }
