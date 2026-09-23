@@ -19,11 +19,45 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Temporary storage for OAuth state values
 const oauthStates = new Set();
 
-app.use(express.json());
+/*
+======================================================
+MIDDLEWARE
+======================================================
+*/
 
-// ======================================================
-// HOME ROUTE
-// ======================================================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Allow frontend running through VS Code Live Server
+app.use((req, res, next) => {
+  const allowedOrigins = ["http://127.0.0.1:5500", "http://localhost:5500"];
+
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+  }
+
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+/*
+======================================================
+HOME ROUTE
+======================================================
+*/
 
 app.get("/", (req, res) => {
   res.json({
@@ -31,9 +65,11 @@ app.get("/", (req, res) => {
   });
 });
 
-// ======================================================
-// SPOTIFY AUTHENTICATION ROUTES
-// ======================================================
+/*
+======================================================
+SPOTIFY AUTHENTICATION ROUTES
+======================================================
+*/
 
 // STEP 1: Redirect user to Spotify login
 app.get("/login", (req, res) => {
@@ -60,6 +96,12 @@ app.get("/login", (req, res) => {
 
   res.redirect(spotifyAuthorizationUrl);
 });
+
+/*
+======================================================
+SPOTIFY CALLBACK
+======================================================
+*/
 
 // STEP 2: Spotify callback route
 app.get("/callback", async (req, res) => {
@@ -89,6 +131,12 @@ app.get("/callback", async (req, res) => {
   oauthStates.delete(state);
 
   try {
+    /*
+    --------------------------------------------------
+    CREATE BASIC AUTHORIZATION HEADER
+    --------------------------------------------------
+    */
+
     const authHeader = Buffer.from(
       `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`,
     ).toString("base64");
@@ -99,7 +147,12 @@ app.get("/callback", async (req, res) => {
       redirect_uri: SPOTIFY_REDIRECT_URI,
     });
 
-    // Exchange authorization code for Spotify tokens
+    /*
+    --------------------------------------------------
+    EXCHANGE AUTHORIZATION CODE FOR SPOTIFY TOKENS
+    --------------------------------------------------
+    */
+
     const tokenResponse = await axios.post(
       "https://accounts.spotify.com/api/token",
       tokenBody.toString(),
@@ -115,7 +168,12 @@ app.get("/callback", async (req, res) => {
     const refreshToken = tokenResponse.data.refresh_token;
     const expiresIn = tokenResponse.data.expires_in;
 
-    // Get Spotify user profile
+    /*
+    --------------------------------------------------
+    GET SPOTIFY USER PROFILE
+    --------------------------------------------------
+    */
+
     const profileResponse = await axios.get("https://api.spotify.com/v1/me", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -124,17 +182,32 @@ app.get("/callback", async (req, res) => {
 
     const spotifyUser = profileResponse.data;
 
-    // Calculate Spotify access token expiration time
+    /*
+    --------------------------------------------------
+    CALCULATE ACCESS TOKEN EXPIRATION
+    --------------------------------------------------
+    */
+
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
 
-    // Find existing user by Spotify ID
+    /*
+    --------------------------------------------------
+    FIND EXISTING USER
+    --------------------------------------------------
+    */
+
     let user = await User.findOne({
       where: {
         spotifyId: spotifyUser.id,
       },
     });
 
-    // Create user if they do not exist
+    /*
+    --------------------------------------------------
+    CREATE OR UPDATE USER
+    --------------------------------------------------
+    */
+
     if (!user) {
       user = await User.create({
         spotifyId: spotifyUser.id,
@@ -145,17 +218,25 @@ app.get("/callback", async (req, res) => {
         tokenExpiresAt: tokenExpiresAt,
       });
     } else {
-      // Update existing Spotify authentication data
       await user.update({
         displayName: spotifyUser.display_name || user.displayName,
+
         email: spotifyUser.email || user.email,
+
         accessToken: accessToken,
+
         refreshToken: refreshToken || user.refreshToken,
+
         tokenExpiresAt: tokenExpiresAt,
       });
     }
 
-    // Create application JWT
+    /*
+    --------------------------------------------------
+    CREATE APPLICATION JWT
+    --------------------------------------------------
+    */
+
     const appJwt = jwt.sign(
       {
         userId: user.id,
@@ -167,37 +248,46 @@ app.get("/callback", async (req, res) => {
       },
     );
 
-    // Save application JWT in database
+    /*
+    --------------------------------------------------
+    SAVE APPLICATION JWT
+    --------------------------------------------------
+    */
+
     await user.update({
       jwtToken: appJwt,
     });
 
-    res.status(200).json({
-      message: "Spotify authentication successful!",
-      user: {
-        id: user.id,
-        spotifyId: user.spotifyId,
-        displayName: user.displayName,
-        email: user.email,
-      },
-      jwtCreated: true,
-    });
+    /*
+    --------------------------------------------------
+    SUCCESSFUL LOGIN
+    REDIRECT BACK TO FRONTEND
+    --------------------------------------------------
+    */
+
+    console.log(`Spotify authentication successful for user ${user.id}`);
+
+    return res.redirect(
+      `http://127.0.0.1:5500/frontend/?userId=${encodeURIComponent(user.id)}`,
+    );
   } catch (error) {
     console.error(
       "Spotify authentication error:",
       error.response?.data || error.message,
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Spotify authentication failed.",
       error: error.response?.data || error.message,
     });
   }
 });
 
-// ======================================================
-// SPOTIFY TOKEN REFRESH
-// ======================================================
+/*
+======================================================
+SPOTIFY TOKEN REFRESH
+======================================================
+*/
 
 // Refresh a user's Spotify access token
 const refreshSpotifyToken = async (user) => {
@@ -245,6 +335,12 @@ const refreshSpotifyToken = async (user) => {
   return newAccessToken;
 };
 
+/*
+======================================================
+GET VALID SPOTIFY ACCESS TOKEN
+======================================================
+*/
+
 // Check whether a user's Spotify access token needs refreshing
 const getValidSpotifyAccessToken = async (user) => {
   if (!user.accessToken) {
@@ -273,37 +369,54 @@ const getValidSpotifyAccessToken = async (user) => {
   return user.accessToken;
 };
 
-// ======================================================
-// USER CRUD ROUTES
-// ======================================================
+/*
+======================================================
+USER CRUD ROUTES
+======================================================
+*/
 
-// CREATE a user
+/*
+------------------------------------------------------
+CREATE USER
+------------------------------------------------------
+*/
+
 app.post("/users", async (req, res) => {
   try {
     const user = await User.create(req.body);
 
-    res.status(201).json(user);
+    return res.status(201).json(user);
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
 });
 
-// READ all users
+/*
+------------------------------------------------------
+READ ALL USERS
+------------------------------------------------------
+*/
+
 app.get("/users", async (req, res) => {
   try {
     const users = await User.findAll();
 
-    res.status(200).json(users);
+    return res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
 });
 
-// READ one user
+/*
+------------------------------------------------------
+READ ONE USER
+------------------------------------------------------
+*/
+
 app.get("/users/:id", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -314,15 +427,20 @@ app.get("/users/:id", async (req, res) => {
       });
     }
 
-    res.status(200).json(user);
+    return res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
 });
 
-// UPDATE a user
+/*
+------------------------------------------------------
+UPDATE USER
+------------------------------------------------------
+*/
+
 app.put("/users/:id", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -335,15 +453,20 @@ app.put("/users/:id", async (req, res) => {
 
     await user.update(req.body);
 
-    res.status(200).json(user);
+    return res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
 });
 
-// DELETE a user
+/*
+------------------------------------------------------
+DELETE USER
+------------------------------------------------------
+*/
+
 app.delete("/users/:id", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -356,21 +479,31 @@ app.delete("/users/:id", async (req, res) => {
 
     await user.destroy();
 
-    res.status(200).json({
-      message: "User deleted successfully",
+    return res.status(200).json({
+      message: "User deleted successfully.",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Delete user error:", error.message);
+
+    return res.status(500).json({
+      message: "Unable to delete user.",
       error: error.message,
     });
   }
 });
 
-// ======================================================
-// CUSTOM SPOTIFY API ROUTES
-// ======================================================
+/*
+======================================================
+CUSTOM SPOTIFY API ROUTES
+======================================================
+*/
 
-// GET Spotify profile for a saved user
+/*
+------------------------------------------------------
+GET SPOTIFY PROFILE FOR SAVED USER
+------------------------------------------------------
+*/
+
 app.get("/api/spotify/profile/:userId", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
@@ -389,21 +522,27 @@ app.get("/api/spotify/profile/:userId", async (req, res) => {
       },
     });
 
-    res.status(200).json(response.data);
+    return res.status(200).json(response.data);
   } catch (error) {
     console.error(
       "Spotify profile error:",
       error.response?.data || error.message,
     );
 
-    res.status(error.response?.status || 500).json({
+    return res.status(error.response?.status || 500).json({
       message: "Unable to retrieve Spotify profile.",
+
       error: error.response?.data || error.message,
     });
   }
 });
 
-// GET user's top Spotify tracks
+/*
+------------------------------------------------------
+GET USER'S TOP SPOTIFY TRACKS
+------------------------------------------------------
+*/
+
 app.get("/api/spotify/top-tracks/:userId", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
@@ -422,6 +561,7 @@ app.get("/api/spotify/top-tracks/:userId", async (req, res) => {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
+
         params: {
           limit: 10,
           time_range: "medium_term",
@@ -429,21 +569,27 @@ app.get("/api/spotify/top-tracks/:userId", async (req, res) => {
       },
     );
 
-    res.status(200).json(response.data);
+    return res.status(200).json(response.data);
   } catch (error) {
     console.error(
       "Spotify top tracks error:",
       error.response?.data || error.message,
     );
 
-    res.status(error.response?.status || 500).json({
+    return res.status(error.response?.status || 500).json({
       message: "Unable to retrieve top Spotify tracks.",
+
       error: error.response?.data || error.message,
     });
   }
 });
 
-// GET user's recently played Spotify tracks
+/*
+------------------------------------------------------
+GET USER'S RECENTLY PLAYED SPOTIFY TRACKS
+------------------------------------------------------
+*/
+
 app.get("/api/spotify/recently-played/:userId", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.userId);
@@ -462,34 +608,58 @@ app.get("/api/spotify/recently-played/:userId", async (req, res) => {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
+
         params: {
           limit: 10,
         },
       },
     );
 
-    res.status(200).json(response.data);
+    return res.status(200).json(response.data);
   } catch (error) {
     console.error(
       "Spotify recently played error:",
       error.response?.data || error.message,
     );
 
-    res.status(error.response?.status || 500).json({
+    return res.status(error.response?.status || 500).json({
       message: "Unable to retrieve recently played Spotify tracks.",
+
       error: error.response?.data || error.message,
     });
   }
 });
 
-// ======================================================
-// JWT AUTHENTICATION STATUS VALIDATION
-// ======================================================
+/*
+======================================================
+JWT AUTHENTICATION STATUS VALIDATION
+======================================================
+*/
 
-// Check whether a user's application JWT is valid
-app.get("/auth/status/:userId", async (req, res) => {
+/*
+------------------------------------------------------
+SHARED AUTH STATUS FUNCTION
+
+This lets the frontend use either:
+
+/auth/status/1
+
+OR
+
+/auth/status?userId=1
+------------------------------------------------------
+*/
+
+const checkAuthenticationStatus = async (userId, res) => {
   try {
-    const user = await User.findByPk(req.params.userId);
+    if (!userId) {
+      return res.status(400).json({
+        authenticated: false,
+        message: "User ID was not provided.",
+      });
+    }
+
+    const user = await User.findByPk(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -511,12 +681,14 @@ app.get("/auth/status/:userId", async (req, res) => {
       return res.status(200).json({
         authenticated: true,
         message: "JWT is valid.",
+
         user: {
           id: user.id,
           spotifyId: user.spotifyId,
           displayName: user.displayName,
           email: user.email,
         },
+
         token: {
           issuedAt: decoded.iat,
           expiresAt: decoded.exp,
@@ -544,11 +716,51 @@ app.get("/auth/status/:userId", async (req, res) => {
       error: error.message,
     });
   }
+};
+
+/*
+------------------------------------------------------
+AUTH STATUS USING URL PARAMETER
+
+Example:
+/auth/status/1
+------------------------------------------------------
+*/
+
+app.get("/auth/status/:userId", async (req, res) => {
+  return checkAuthenticationStatus(req.params.userId, res);
 });
 
-// ======================================================
-// START SERVER
-// ======================================================
+/*
+------------------------------------------------------
+AUTH STATUS USING QUERY PARAMETER
+
+Example:
+/auth/status?userId=1
+------------------------------------------------------
+*/
+
+app.get("/auth/status", async (req, res) => {
+  return checkAuthenticationStatus(req.query.userId, res);
+});
+
+/*
+======================================================
+404 ROUTE
+======================================================
+*/
+
+app.use((req, res) => {
+  return res.status(404).json({
+    message: "Route not found.",
+  });
+});
+
+/*
+======================================================
+START SERVER
+======================================================
+*/
 
 const startServer = async () => {
   try {

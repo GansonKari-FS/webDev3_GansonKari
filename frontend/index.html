@@ -10,18 +10,63 @@
   </head>
 
   <body>
-    <main class="container">
-      <header>
+    <!-- =========================================
+         LOGIN SCREEN
+    ========================================== -->
+    <main id="loginPage" class="login-page">
+      <section class="login-card">
+        <div class="spotify-logo" aria-hidden="true">♫</div>
+
+        <p class="eyebrow">WELCOME TO</p>
+
         <h1>Spotify Music Search</h1>
-        <p>Search for your favorite artists, albums, and songs.</p>
+
+        <p class="login-description">
+          Connect your Spotify account to search for music, discover your top
+          tracks, and view your recently played songs.
+        </p>
+
+        <button id="spotifyLoginBtn" class="spotify-login-btn" type="button">
+          <span class="button-icon">♫</span>
+          Log in with Spotify
+        </button>
+
+        <p class="login-note">
+          You will be redirected to Spotify to securely authorize your account.
+        </p>
+
+        <p id="loginStatus" class="status-message" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <!-- =========================================
+         APPLICATION
+         Hidden until authentication succeeds
+    ========================================== -->
+    <main id="appPage" class="app-page hidden">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">SPOTIFY MUSIC SEARCH</p>
+          <h1>Welcome, <span id="displayName">Spotify User</span></h1>
+        </div>
+
+        <button id="logoutBtn" class="logout-btn" type="button">Log Out</button>
       </header>
 
       <section class="search-section">
+        <div class="section-heading">
+          <h2>Search Spotify</h2>
+          <p>Find your favorite artists, albums, and songs.</p>
+        </div>
+
         <form id="searchForm">
+          <label for="searchInput" class="sr-only">Search Spotify</label>
+
           <input
             type="text"
             id="searchInput"
             placeholder="Search Spotify..."
+            autocomplete="off"
             required
           />
 
@@ -29,7 +74,7 @@
         </form>
       </section>
 
-      <section id="results">
+      <section id="results" class="results-section">
         <p class="welcome-message">Search for music to get started.</p>
       </section>
     </main>
