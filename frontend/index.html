@@ -40,43 +40,169 @@
     </main>
 
     <!-- =========================================
-         APPLICATION
-         Hidden until authentication succeeds
+         AUTHENTICATED APPLICATION
     ========================================== -->
-    <main id="appPage" class="app-page hidden">
-      <header class="app-header">
-        <div>
-          <p class="eyebrow">SPOTIFY MUSIC SEARCH</p>
-          <h1>Welcome, <span id="displayName">Spotify User</span></h1>
+    <main id="appPage" class="dashboard-layout hidden">
+      <!-- =========================================
+           SIDEBAR
+      ========================================== -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="sidebar-logo" aria-hidden="true">♫</div>
+
+          <div>
+            <p class="sidebar-title">Spotify</p>
+            <p class="sidebar-subtitle">Music Search</p>
+          </div>
         </div>
 
-        <button id="logoutBtn" class="logout-btn" type="button">Log Out</button>
-      </header>
+        <nav class="sidebar-nav" aria-label="Main navigation">
+          <button
+            class="nav-link active"
+            type="button"
+            data-section="dashboard"
+          >
+            <span aria-hidden="true">⌂</span>
+            Dashboard
+          </button>
 
-      <section class="search-section">
-        <div class="section-heading">
-          <h2>Search Spotify</h2>
-          <p>Find your favorite artists, albums, and songs.</p>
+          <button class="nav-link" type="button" data-section="search">
+            <span aria-hidden="true">⌕</span>
+            Search
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="mini-profile">
+            <div class="profile-avatar" id="profileAvatar" aria-hidden="true">
+              ♫
+            </div>
+
+            <div class="mini-profile-info">
+              <p id="sidebarDisplayName">Spotify User</p>
+              <span>Connected with Spotify</span>
+            </div>
+          </div>
+
+          <button id="logoutBtn" class="logout-btn" type="button">
+            Log Out
+          </button>
         </div>
+      </aside>
 
-        <form id="searchForm">
-          <label for="searchInput" class="sr-only">Search Spotify</label>
+      <!-- =========================================
+           MAIN DASHBOARD CONTENT
+      ========================================== -->
+      <div class="dashboard-main">
+        <header class="dashboard-header">
+          <div>
+            <p class="eyebrow">SPOTIFY MUSIC SEARCH</p>
+            <h1>Welcome, <span id="displayName">Spotify User</span></h1>
+            <p class="header-description">
+              Search Spotify and discover music from your account.
+            </p>
+          </div>
 
-          <input
-            type="text"
-            id="searchInput"
-            placeholder="Search Spotify..."
-            autocomplete="off"
-            required
-          />
+          <div class="connection-status">
+            <span class="status-dot" aria-hidden="true"></span>
+            Spotify Connected
+          </div>
+        </header>
 
-          <button type="submit">Search</button>
-        </form>
-      </section>
+        <!-- =========================================
+             LOADING / ERROR STATUS
+        ========================================== -->
+        <div
+          id="dashboardStatus"
+          class="dashboard-status hidden"
+          aria-live="polite"
+        ></div>
 
-      <section id="results" class="results-section">
-        <p class="welcome-message">Search for music to get started.</p>
-      </section>
+        <!-- =========================================
+             DASHBOARD SECTION
+        ========================================== -->
+        <section id="dashboardSection" class="content-section">
+          <div class="section-heading">
+            <p class="eyebrow">YOUR DASHBOARD</p>
+            <h2>Music Dashboard</h2>
+            <p>Your Spotify account is connected and ready to search.</p>
+          </div>
+
+          <div class="dashboard-cards">
+            <article class="dashboard-card">
+              <div class="dashboard-card-icon" aria-hidden="true">♫</div>
+              <h3>Search Music</h3>
+              <p>
+                Search Spotify for songs, artists, and albums using live Spotify
+                data.
+              </p>
+
+              <button
+                id="dashboardSearchBtn"
+                class="card-action-btn"
+                type="button"
+              >
+                Start Searching
+              </button>
+            </article>
+
+            <article class="dashboard-card">
+              <div class="dashboard-card-icon" aria-hidden="true">✓</div>
+              <h3>Account Connected</h3>
+              <p>
+                You are successfully authenticated and connected to Spotify.
+              </p>
+
+              <div class="connected-badge">
+                <span class="status-dot" aria-hidden="true"></span>
+                Connected
+              </div>
+            </article>
+
+            <article class="dashboard-card">
+              <div class="dashboard-card-icon" aria-hidden="true">★</div>
+              <h3>Your Profile</h3>
+              <p>
+                Logged in as
+                <strong id="profileDisplayName">Spotify User</strong>.
+              </p>
+
+              <p class="profile-status-text">Spotify authorization active</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- =========================================
+             SEARCH SECTION
+        ========================================== -->
+        <section id="searchSection" class="content-section hidden">
+          <div class="search-section">
+            <div class="section-heading">
+              <p class="eyebrow">DISCOVER MUSIC</p>
+              <h2>Search Spotify</h2>
+              <p>Find your favorite artists, albums, and songs.</p>
+            </div>
+
+            <form id="searchForm">
+              <label for="searchInput" class="sr-only"> Search Spotify </label>
+
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search Spotify..."
+                autocomplete="off"
+                required
+              />
+
+              <button type="submit">Search</button>
+            </form>
+          </div>
+
+          <section id="results" class="results-section">
+            <p class="welcome-message">Search for music to get started.</p>
+          </section>
+        </section>
+      </div>
     </main>
 
     <script src="app.js"></script>
