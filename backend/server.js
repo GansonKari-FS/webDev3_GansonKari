@@ -631,6 +631,58 @@ app.get("/api/spotify/recently-played/:userId", async (req, res) => {
 });
 
 /*
+------------------------------------------------------
+SEARCH SPOTIFY
+------------------------------------------------------
+*/
+
+app.get("/api/spotify/search/:userId", async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Spotify user not found.",
+      });
+    }
+
+    const searchTerm = req.query.q;
+
+    if (!searchTerm || !searchTerm.trim()) {
+      return res.status(400).json({
+        message: "Please enter something to search for.",
+      });
+    }
+
+    const accessToken = await getValidSpotifyAccessToken(user);
+
+    const response = await axios.get("https://api.spotify.com/v1/search", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+
+      params: {
+        q: searchTerm.trim(),
+        type: "track,artist,album",
+        limit: 10,
+      },
+    });
+
+    return res.status(200).json(response.data);
+  } catch (error) {
+    console.error(
+      "Spotify search error:",
+      error.response?.data || error.message,
+    );
+
+    return res.status(error.response?.status || 500).json({
+      message: "Unable to search Spotify.",
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+/*
 ======================================================
 JWT AUTHENTICATION STATUS VALIDATION
 ======================================================
