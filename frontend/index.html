@@ -70,6 +70,16 @@
             <span aria-hidden="true">⌕</span>
             Search
           </button>
+
+          <button class="nav-link" type="button" data-section="topTracks">
+            <span aria-hidden="true">★</span>
+            Top Tracks
+          </button>
+
+          <button class="nav-link" type="button" data-section="recentlyPlayed">
+            <span aria-hidden="true">↻</span>
+            Recently Played
+          </button>
         </nav>
 
         <div class="sidebar-bottom">
@@ -98,6 +108,7 @@
           <div>
             <p class="eyebrow">SPOTIFY MUSIC SEARCH</p>
             <h1>Welcome, <span id="displayName">Spotify User</span></h1>
+
             <p class="header-description">
               Search Spotify and discover music from your account.
             </p>
@@ -125,13 +136,16 @@
           <div class="section-heading">
             <p class="eyebrow">YOUR DASHBOARD</p>
             <h2>Music Dashboard</h2>
-            <p>Your Spotify account is connected and ready to search.</p>
+
+            <p>Your Spotify account is connected and ready to explore.</p>
           </div>
 
           <div class="dashboard-cards">
             <article class="dashboard-card">
               <div class="dashboard-card-icon" aria-hidden="true">♫</div>
+
               <h3>Search Music</h3>
+
               <p>
                 Search Spotify for songs, artists, and albums using live Spotify
                 data.
@@ -148,7 +162,9 @@
 
             <article class="dashboard-card">
               <div class="dashboard-card-icon" aria-hidden="true">✓</div>
+
               <h3>Account Connected</h3>
+
               <p>
                 You are successfully authenticated and connected to Spotify.
               </p>
@@ -161,7 +177,9 @@
 
             <article class="dashboard-card">
               <div class="dashboard-card-icon" aria-hidden="true">★</div>
+
               <h3>Your Profile</h3>
+
               <p>
                 Logged in as
                 <strong id="profileDisplayName">Spotify User</strong>.
@@ -179,12 +197,14 @@
           <div class="search-section">
             <div class="section-heading">
               <p class="eyebrow">DISCOVER MUSIC</p>
+
               <h2>Search Spotify</h2>
+
               <p>Find your favorite artists, albums, and songs.</p>
             </div>
 
             <form id="searchForm">
-              <label for="searchInput" class="sr-only"> Search Spotify </label>
+              <label for="searchInput" class="sr-only">Search Spotify</label>
 
               <input
                 type="text"
@@ -201,6 +221,60 @@
           <section id="results" class="results-section">
             <p class="welcome-message">Search for music to get started.</p>
           </section>
+        </section>
+
+        <!-- =========================================
+             TOP TRACKS SECTION
+        ========================================== -->
+        <section id="topTracksSection" class="content-section hidden">
+          <div class="feature-heading">
+            <div>
+              <p class="eyebrow">YOUR MUSIC</p>
+              <h2>Your Top Tracks</h2>
+              <p class="feature-description">
+                See the songs you've been listening to most on Spotify.
+              </p>
+            </div>
+          </div>
+
+          <div
+            id="topTracksStatus"
+            class="feature-status hidden"
+            aria-live="polite"
+          ></div>
+
+          <div id="topTracksResults" class="results-section">
+            <p class="welcome-message">
+              Select Top Tracks to load your Spotify favorites.
+            </p>
+          </div>
+        </section>
+
+        <!-- =========================================
+             RECENTLY PLAYED SECTION
+        ========================================== -->
+        <section id="recentlyPlayedSection" class="content-section hidden">
+          <div class="feature-heading">
+            <div>
+              <p class="eyebrow">LISTENING HISTORY</p>
+              <h2>Recently Played</h2>
+              <p class="feature-description">
+                View songs you've recently listened to on Spotify.
+              </p>
+            </div>
+          </div>
+
+          <div
+            id="recentlyPlayedStatus"
+            class="feature-status hidden"
+            aria-live="polite"
+          ></div>
+
+          <div id="recentlyPlayedResults" class="results-section">
+            <p class="welcome-message">
+              Select Recently Played to load your listening history.
+            </p>
+          </div>
         </section>
       </div>
     </main>

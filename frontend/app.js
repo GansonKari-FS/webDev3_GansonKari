@@ -21,7 +21,16 @@ const dashboardStatus = document.getElementById("dashboardStatus");
 
 const dashboardSection = document.getElementById("dashboardSection");
 const searchSection = document.getElementById("searchSection");
+const topTracksSection = document.getElementById("topTracksSection");
+const recentlyPlayedSection = document.getElementById("recentlyPlayedSection");
+
 const dashboardSearchBtn = document.getElementById("dashboardSearchBtn");
+
+const topTracksStatus = document.getElementById("topTracksStatus");
+const topTracksResults = document.getElementById("topTracksResults");
+
+const recentlyPlayedStatus = document.getElementById("recentlyPlayedStatus");
+const recentlyPlayedResults = document.getElementById("recentlyPlayedResults");
 
 const navLinks = document.querySelectorAll(".nav-link");
 
@@ -115,7 +124,7 @@ function hideDashboardStatus() {
 
 /*
 ======================================================
-DASHBOARD NAVIGATION
+NAVIGATION HELPERS
 ======================================================
 */
 
@@ -126,22 +135,48 @@ function setActiveNavigation(sectionName) {
   });
 }
 
-function showDashboard() {
+function hideAllSections() {
   if (dashboardSection) {
-    dashboardSection.classList.remove("hidden");
+    dashboardSection.classList.add("hidden");
   }
 
   if (searchSection) {
     searchSection.classList.add("hidden");
   }
 
+  if (topTracksSection) {
+    topTracksSection.classList.add("hidden");
+  }
+
+  if (recentlyPlayedSection) {
+    recentlyPlayedSection.classList.add("hidden");
+  }
+}
+
+/*
+======================================================
+SHOW DASHBOARD
+======================================================
+*/
+
+function showDashboard() {
+  hideAllSections();
+
+  if (dashboardSection) {
+    dashboardSection.classList.remove("hidden");
+  }
+
   setActiveNavigation("dashboard");
 }
 
+/*
+======================================================
+SHOW SEARCH
+======================================================
+*/
+
 function showSearch() {
-  if (dashboardSection) {
-    dashboardSection.classList.add("hidden");
-  }
+  hideAllSections();
 
   if (searchSection) {
     searchSection.classList.remove("hidden");
@@ -154,16 +189,69 @@ function showSearch() {
   }
 }
 
+/*
+======================================================
+SHOW TOP TRACKS
+======================================================
+*/
+
+function showTopTracks() {
+  hideAllSections();
+
+  if (topTracksSection) {
+    topTracksSection.classList.remove("hidden");
+  }
+
+  setActiveNavigation("top-tracks");
+
+  loadTopTracks();
+}
+
+/*
+======================================================
+SHOW RECENTLY PLAYED
+======================================================
+*/
+
+function showRecentlyPlayed() {
+  hideAllSections();
+
+  if (recentlyPlayedSection) {
+    recentlyPlayedSection.classList.remove("hidden");
+  }
+
+  setActiveNavigation("recently-played");
+
+  loadRecentlyPlayed();
+}
+
+/*
+======================================================
+SIDEBAR NAVIGATION
+======================================================
+*/
+
 navLinks.forEach((link) => {
   link.addEventListener("click", () => {
     const section = link.dataset.section;
 
     if (section === "dashboard") {
       showDashboard();
+      return;
     }
 
     if (section === "search") {
       showSearch();
+      return;
+    }
+
+    if (section === "top-tracks") {
+      showTopTracks();
+      return;
+    }
+
+    if (section === "recently-played") {
+      showRecentlyPlayed();
     }
   });
 });
@@ -302,9 +390,144 @@ if (logoutButton) {
       `;
     }
 
+    if (topTracksResults) {
+      topTracksResults.innerHTML = `
+        <p class="welcome-message">
+          Select Top Tracks to load your favorite music.
+        </p>
+      `;
+    }
+
+    if (recentlyPlayedResults) {
+      recentlyPlayedResults.innerHTML = `
+        <p class="welcome-message">
+          Select Recently Played to load your listening history.
+        </p>
+      `;
+    }
+
     showDashboard();
     showLogin("You have been logged out.");
   });
+}
+
+/*
+======================================================
+HANDLE EXPIRED AUTHENTICATION
+======================================================
+*/
+
+function handleExpiredAuthentication(response) {
+  if (response.status !== 401 && response.status !== 403) {
+    return false;
+  }
+
+  localStorage.removeItem("spotifyUserId");
+  currentUserId = null;
+
+  showLogin("Your Spotify session has expired. Please log in again.");
+
+  return true;
+}
+
+/*
+======================================================
+CREATE TRACK CARD
+======================================================
+*/
+
+function createTrackCard(track) {
+  const image = track?.album?.images?.[0]?.url || "";
+
+  const artists =
+    track?.artists?.map((artist) => artist.name).join(", ") || "Unknown Artist";
+
+  const albumName = track?.album?.name || "Unknown Album";
+
+  const spotifyURL = track?.external_urls?.spotify || "";
+
+  const trackName = track?.name || "Unknown Track";
+
+  return `
+    <article class="track-card">
+
+      ${
+        image
+          ? `
+            <img
+              src="${escapeHTML(image)}"
+              alt="${escapeHTML(trackName)} album cover"
+              class="track-image"
+            />
+          `
+          : `
+            <div class="track-image-placeholder">
+              ♫
+            </div>
+          `
+      }
+
+      <div class="track-info">
+
+        <h3>${escapeHTML(trackName)}</h3>
+
+        <p>
+          <strong>Artist:</strong>
+          ${escapeHTML(artists)}
+        </p>
+
+        <p>
+          <strong>Album:</strong>
+          ${escapeHTML(albumName)}
+        </p>
+
+        ${
+          spotifyURL
+            ? `
+              <a
+                href="${escapeHTML(spotifyURL)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="spotify-link"
+              >
+                Open in Spotify
+              </a>
+            `
+            : ""
+        }
+
+      </div>
+
+    </article>
+  `;
+}
+
+/*
+======================================================
+DISPLAY TRACKS
+======================================================
+*/
+
+function displayTracks(container, tracks, emptyMessage) {
+  if (!container) {
+    return;
+  }
+
+  if (!Array.isArray(tracks) || tracks.length === 0) {
+    container.innerHTML = `
+      <p class="welcome-message">
+        ${escapeHTML(emptyMessage)}
+      </p>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="track-grid">
+      ${tracks.map((track) => createTrackCard(track)).join("")}
+    </div>
+  `;
 }
 
 /*
@@ -350,17 +573,7 @@ if (searchForm) {
       const data = await response.json();
 
       if (!response.ok) {
-        /*
-        If authentication expired while searching,
-        force the user back to the login screen.
-        */
-
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem("spotifyUserId");
-          currentUserId = null;
-
-          showLogin("Your Spotify session has expired. Please log in again.");
-
+        if (handleExpiredAuthentication(response)) {
           return;
         }
 
@@ -369,82 +582,7 @@ if (searchForm) {
 
       const tracks = data.tracks?.items || [];
 
-      if (tracks.length === 0) {
-        results.innerHTML = `
-          <p class="welcome-message">
-            No songs found for "${escapeHTML(searchTerm)}".
-          </p>
-        `;
-
-        return;
-      }
-
-      results.innerHTML = `
-        <div class="track-grid">
-          ${tracks
-            .map((track) => {
-              const image = track.album?.images?.[0]?.url || "";
-
-              const artists =
-                track.artists?.map((artist) => artist.name).join(", ") ||
-                "Unknown Artist";
-
-              const albumName = track.album?.name || "Unknown Album";
-
-              const spotifyURL = track.external_urls?.spotify || "";
-
-              return `
-                <article class="track-card">
-                  ${
-                    image
-                      ? `
-                        <img
-                          src="${escapeHTML(image)}"
-                          alt="${escapeHTML(track.name)} album cover"
-                          class="track-image"
-                        />
-                      `
-                      : `
-                        <div class="track-image-placeholder">
-                          ♫
-                        </div>
-                      `
-                  }
-
-                  <div class="track-info">
-                    <h3>${escapeHTML(track.name)}</h3>
-
-                    <p>
-                      <strong>Artist:</strong>
-                      ${escapeHTML(artists)}
-                    </p>
-
-                    <p>
-                      <strong>Album:</strong>
-                      ${escapeHTML(albumName)}
-                    </p>
-
-                    ${
-                      spotifyURL
-                        ? `
-                          <a
-                            href="${escapeHTML(spotifyURL)}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="spotify-link"
-                          >
-                            Open in Spotify
-                          </a>
-                        `
-                        : ""
-                    }
-                  </div>
-                </article>
-              `;
-            })
-            .join("")}
-        </div>
-      `;
+      displayTracks(results, tracks, `No songs found for "${searchTerm}".`);
     } catch (error) {
       console.error("Spotify search failed:", error);
 
@@ -456,6 +594,189 @@ if (searchForm) {
       `;
     }
   });
+}
+
+/*
+======================================================
+LOAD TOP TRACKS
+======================================================
+*/
+
+async function loadTopTracks() {
+  if (!currentUserId) {
+    showLogin("Please log in with Spotify first.");
+    return;
+  }
+
+  if (topTracksStatus) {
+    topTracksStatus.textContent = "Loading your top Spotify tracks...";
+
+    topTracksStatus.className = "feature-status loading";
+  }
+
+  if (topTracksResults) {
+    topTracksResults.innerHTML = `
+      <p class="welcome-message">
+        Loading your top tracks...
+      </p>
+    `;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/spotify/top-tracks/${encodeURIComponent(currentUserId)}`,
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (handleExpiredAuthentication(response)) {
+        return;
+      }
+
+      throw new Error(data.message || "Unable to load top tracks.");
+    }
+
+    /*
+    Support either:
+    { items: [...] }
+
+    or:
+    { tracks: { items: [...] } }
+
+    or:
+    { tracks: [...] }
+    */
+
+    const tracks = Array.isArray(data.items)
+      ? data.items
+      : Array.isArray(data.tracks)
+        ? data.tracks
+        : data.tracks?.items || [];
+
+    if (topTracksStatus) {
+      topTracksStatus.textContent = "";
+      topTracksStatus.className = "feature-status hidden";
+    }
+
+    displayTracks(
+      topTracksResults,
+      tracks,
+      "No top tracks were returned by Spotify.",
+    );
+  } catch (error) {
+    console.error("Top tracks failed:", error);
+
+    if (topTracksStatus) {
+      topTracksStatus.textContent = `Unable to load top tracks: ${error.message}`;
+
+      topTracksStatus.className = "feature-status error";
+    }
+
+    if (topTracksResults) {
+      topTracksResults.innerHTML = `
+        <p class="welcome-message error-message">
+          Unable to load your top Spotify tracks.
+        </p>
+      `;
+    }
+  }
+}
+
+/*
+======================================================
+LOAD RECENTLY PLAYED
+======================================================
+*/
+
+async function loadRecentlyPlayed() {
+  if (!currentUserId) {
+    showLogin("Please log in with Spotify first.");
+    return;
+  }
+
+  if (recentlyPlayedStatus) {
+    recentlyPlayedStatus.textContent = "Loading your recently played tracks...";
+
+    recentlyPlayedStatus.className = "feature-status loading";
+  }
+
+  if (recentlyPlayedResults) {
+    recentlyPlayedResults.innerHTML = `
+      <p class="welcome-message">
+        Loading your listening history...
+      </p>
+    `;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/spotify/recently-played/${encodeURIComponent(
+        currentUserId,
+      )}`,
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (handleExpiredAuthentication(response)) {
+        return;
+      }
+
+      throw new Error(data.message || "Unable to load recently played tracks.");
+    }
+
+    /*
+    Spotify recently played usually returns items
+    shaped like:
+
+    {
+      track: {
+        name: "...",
+        album: {...},
+        artists: [...]
+      }
+    }
+
+    Convert those items into normal track objects
+    so we can reuse the same track cards.
+    */
+
+    const rawItems = Array.isArray(data.items)
+      ? data.items
+      : Array.isArray(data.tracks)
+        ? data.tracks
+        : data.tracks?.items || [];
+
+    const tracks = rawItems.map((item) => item?.track || item).filter(Boolean);
+
+    if (recentlyPlayedStatus) {
+      recentlyPlayedStatus.textContent = "";
+      recentlyPlayedStatus.className = "feature-status hidden";
+    }
+
+    displayTracks(
+      recentlyPlayedResults,
+      tracks,
+      "No recently played tracks were returned by Spotify.",
+    );
+  } catch (error) {
+    console.error("Recently played tracks failed:", error);
+
+    if (recentlyPlayedStatus) {
+      recentlyPlayedStatus.textContent = `Unable to load recently played tracks: ${error.message}`;
+
+      recentlyPlayedStatus.className = "feature-status error";
+    }
+
+    if (recentlyPlayedResults) {
+      recentlyPlayedResults.innerHTML = `
+        <p class="welcome-message error-message">
+          Unable to load your recently played Spotify tracks.
+        </p>
+      `;
+    }
+  }
 }
 
 /*
