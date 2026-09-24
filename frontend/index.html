@@ -1,284 +1,265 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+const API_URL = "http://127.0.0.1:3001"; /*
+====================================================== PAGE ELEMENTS
+====================================================== */ const loginPage =
+document.getElementById("loginPage"); const appPage =
+document.getElementById("appPage"); const loginButton =
+document.getElementById("spotifyLoginBtn"); const logoutButton =
+document.getElementById("logoutBtn"); const authStatus =
+document.getElementById("loginStatus"); const displayName =
+document.getElementById("displayName"); const sidebarDisplayName =
+document.getElementById("sidebarDisplayName"); const profileDisplayName =
+document.getElementById("profileDisplayName"); const dashboardStatus =
+document.getElementById("dashboardStatus"); const dashboardSection =
+document.getElementById("dashboardSection"); const searchSection =
+document.getElementById("searchSection"); const topTracksSection =
+document.getElementById("topTracksSection"); const recentlyPlayedSection =
+document.getElementById( "recentlyPlayedSection", ); const dashboardSearchBtn =
+document.getElementById("dashboardSearchBtn"); const topTracksStatus =
+document.getElementById("topTracksStatus"); const topTracksResults =
+document.getElementById("topTracksResults"); const recentlyPlayedStatus =
+document.getElementById( "recentlyPlayedStatus", ); const recentlyPlayedResults
+= document.getElementById( "recentlyPlayedResults", ); const navLinks =
+document.querySelectorAll(".nav-link"); const searchForm =
+document.getElementById("searchForm"); const searchInput =
+document.getElementById("searchInput"); const results =
+document.getElementById("results"); /*
+====================================================== CURRENT USER
+====================================================== */ let currentUserId =
+null; /* ====================================================== SHOW LOGIN
+SCREEN ====================================================== */ function
+showLogin(message = "") { if (loginPage) { loginPage.classList.remove("hidden");
+} if (appPage) { appPage.classList.add("hidden"); } if (authStatus) {
+authStatus.textContent = message; } } /*
+====================================================== SHOW MAIN APPLICATION
+====================================================== */ function showApp(user)
+{ if (loginPage) { loginPage.classList.add("hidden"); } if (appPage) {
+appPage.classList.remove("hidden"); } const userName = user?.displayName ||
+"Spotify User"; if (displayName) { displayName.textContent = userName; } if
+(sidebarDisplayName) { sidebarDisplayName.textContent = userName; } if
+(profileDisplayName) { profileDisplayName.textContent = userName; }
+showDashboard(); } /* ======================================================
+DASHBOARD STATUS ====================================================== */
+function showDashboardStatus(message, type = "loading") { if (!dashboardStatus)
+{ return; } dashboardStatus.textContent = message; dashboardStatus.className =
+`dashboard-status ${type}`; } function hideDashboardStatus() { if
+(!dashboardStatus) { return; } dashboardStatus.textContent = "";
+dashboardStatus.className = "dashboard-status hidden"; } /*
+====================================================== NAVIGATION
+====================================================== */ function
+setActiveNavigation(sectionName) { navLinks.forEach((link) => { const isActive =
+link.dataset.section === sectionName; link.classList.toggle("active", isActive);
+}); } function hideAllSections() { if (dashboardSection) {
+dashboardSection.classList.add("hidden"); } if (searchSection) {
+searchSection.classList.add("hidden"); } if (topTracksSection) {
+topTracksSection.classList.add("hidden"); } if (recentlyPlayedSection) {
+recentlyPlayedSection.classList.add("hidden"); } } /*
+====================================================== SHOW DASHBOARD
+====================================================== */ function
+showDashboard() { hideAllSections(); if (dashboardSection) {
+dashboardSection.classList.remove("hidden"); } setActiveNavigation("dashboard");
+} /* ====================================================== SHOW SEARCH
+====================================================== */ function showSearch()
+{ hideAllSections(); if (searchSection) {
+searchSection.classList.remove("hidden"); } setActiveNavigation("search"); if
+(searchInput) { searchInput.focus(); } } /*
+====================================================== SHOW TOP TRACKS
+====================================================== */ function
+showTopTracks() { hideAllSections(); if (topTracksSection) {
+topTracksSection.classList.remove("hidden"); } setActiveNavigation("topTracks");
+loadTopTracks(); } /* ======================================================
+SHOW RECENTLY PLAYED ====================================================== */
+function showRecentlyPlayed() { hideAllSections(); if (recentlyPlayedSection) {
+recentlyPlayedSection.classList.remove("hidden"); }
+setActiveNavigation("recentlyPlayed"); loadRecentlyPlayed(); } /*
+====================================================== SIDEBAR NAVIGATION
+====================================================== */
+navLinks.forEach((link) => { link.addEventListener("click", () => { const
+section = link.dataset.section; if (section === "dashboard") { showDashboard();
+return; } if (section === "search") { showSearch(); return; } if (section ===
+"topTracks") { showTopTracks(); return; } if (section === "recentlyPlayed") {
+showRecentlyPlayed(); } }); }); /*
+====================================================== DASHBOARD SEARCH BUTTON
+====================================================== */ if
+(dashboardSearchBtn) { dashboardSearchBtn.addEventListener("click", () => {
+showSearch(); }); } /* ======================================================
+GET USER ID ====================================================== */ function
+getUserId() { const params = new URLSearchParams(window.location.search); const
+urlUserId = params.get("userId"); if (urlUserId) {
+localStorage.setItem("spotifyUserId", urlUserId); window.history.replaceState(
+{}, document.title, window.location.pathname, ); return urlUserId; } return
+localStorage.getItem("spotifyUserId"); } /*
+====================================================== CHECK AUTHENTICATION
+====================================================== */ async function
+checkAuthentication() { currentUserId = getUserId(); if (!currentUserId) {
+showLogin(); return; } try { if (authStatus) { authStatus.textContent =
+"Checking authentication..."; } showDashboardStatus( "Loading your Spotify
+dashboard...", "loading", ); const response = await fetch(
+`${API_URL}/auth/status/${encodeURIComponent(currentUserId)}`, { method: "GET",
+}, ); const data = await response.json(); if (response.ok && data.authenticated
+=== true) { showApp(data.user); hideDashboardStatus(); return; }
+localStorage.removeItem("spotifyUserId"); currentUserId = null;
+hideDashboardStatus(); showLogin( "Your session has expired. Please log in
+again.", ); } catch (error) { console.error( "Authentication check failed:",
+error, ); currentUserId = null; hideDashboardStatus(); showLogin( "Unable to
+verify authentication. Make sure the server is running.", ); } } /*
+====================================================== SPOTIFY LOGIN
+====================================================== */ if (loginButton) {
+loginButton.addEventListener("click", () => { if (authStatus) {
+authStatus.textContent = "Redirecting to Spotify..."; } window.location.href =
+`${API_URL}/login`; }); } /*
+====================================================== LOGOUT
+====================================================== */ if (logoutButton) {
+logoutButton.addEventListener("click", () => {
+localStorage.removeItem("spotifyUserId"); currentUserId = null; if (displayName)
+{ displayName.textContent = "Spotify User"; } if (sidebarDisplayName) {
+sidebarDisplayName.textContent = "Spotify User"; } if (profileDisplayName) {
+profileDisplayName.textContent = "Spotify User"; } if (searchInput) {
+searchInput.value = ""; } if (results) { results.innerHTML = `
+<p class="welcome-message">Search for music to get started.</p>
+`; } if (topTracksResults) { topTracksResults.innerHTML = `
+<p class="welcome-message">Select Top Tracks to load your Spotify favorites.</p>
+`; } if (recentlyPlayedResults) { recentlyPlayedResults.innerHTML = `
+<p class="welcome-message">
+  Select Recently Played to load your listening history.
+</p>
+`; } showDashboard(); showLogin("You have been logged out."); }); } /*
+====================================================== HANDLE EXPIRED
+AUTHENTICATION ====================================================== */
+function handleExpiredAuthentication(response) { if ( response.status !== 401 &&
+response.status !== 403 ) { return false; }
+localStorage.removeItem("spotifyUserId"); currentUserId = null; showLogin( "Your
+Spotify session has expired. Please log in again.", ); return true; } /*
+====================================================== CREATE TRACK CARD
+====================================================== */ function
+createTrackCard(track) { const image = track?.album?.images?.[0]?.url || "";
+const artists = track?.artists ?.map((artist) => artist.name) .join(", ") ||
+"Unknown Artist"; const albumName = track?.album?.name || "Unknown Album"; const
+spotifyURL = track?.external_urls?.spotify || ""; const trackName = track?.name
+|| "Unknown Track"; return `
+<article class="track-card">
+  ${ image ? `
+  <img
+    src="${escapeHTML(image)}"
+    alt="${escapeHTML(trackName)} album cover"
+    class="track-image"
+  />
+  ` : `
+  <div class="track-image-placeholder">♫</div>
+  ` }
 
-    <title>Spotify Music Search</title>
+  <div class="track-info">
+    <h3>${escapeHTML(trackName)}</h3>
 
-    <link rel="stylesheet" href="style.css" />
-  </head>
+    <p>
+      <strong>Artist:</strong>
+      ${escapeHTML(artists)}
+    </p>
 
-  <body>
-    <!-- =========================================
-         LOGIN SCREEN
-    ========================================== -->
-    <main id="loginPage" class="login-page">
-      <section class="login-card">
-        <div class="spotify-logo" aria-hidden="true">♫</div>
+    <p>
+      <strong>Album:</strong>
+      ${escapeHTML(albumName)}
+    </p>
 
-        <p class="eyebrow">WELCOME TO</p>
-
-        <h1>Spotify Music Search</h1>
-
-        <p class="login-description">
-          Connect your Spotify account to search for music, discover your top
-          tracks, and view your recently played songs.
-        </p>
-
-        <button id="spotifyLoginBtn" class="spotify-login-btn" type="button">
-          <span class="button-icon">♫</span>
-          Log in with Spotify
-        </button>
-
-        <p class="login-note">
-          You will be redirected to Spotify to securely authorize your account.
-        </p>
-
-        <p id="loginStatus" class="status-message" aria-live="polite"></p>
-      </section>
-    </main>
-
-    <!-- =========================================
-         AUTHENTICATED APPLICATION
-    ========================================== -->
-    <main id="appPage" class="dashboard-layout hidden">
-      <!-- =========================================
-           SIDEBAR
-      ========================================== -->
-      <aside class="sidebar">
-        <div class="sidebar-brand">
-          <div class="sidebar-logo" aria-hidden="true">♫</div>
-
-          <div>
-            <p class="sidebar-title">Spotify</p>
-            <p class="sidebar-subtitle">Music Search</p>
-          </div>
-        </div>
-
-        <nav class="sidebar-nav" aria-label="Main navigation">
-          <button
-            class="nav-link active"
-            type="button"
-            data-section="dashboard"
-          >
-            <span aria-hidden="true">⌂</span>
-            Dashboard
-          </button>
-
-          <button class="nav-link" type="button" data-section="search">
-            <span aria-hidden="true">⌕</span>
-            Search
-          </button>
-
-          <button class="nav-link" type="button" data-section="topTracks">
-            <span aria-hidden="true">★</span>
-            Top Tracks
-          </button>
-
-          <button class="nav-link" type="button" data-section="recentlyPlayed">
-            <span aria-hidden="true">↻</span>
-            Recently Played
-          </button>
-        </nav>
-
-        <div class="sidebar-bottom">
-          <div class="mini-profile">
-            <div class="profile-avatar" id="profileAvatar" aria-hidden="true">
-              ♫
-            </div>
-
-            <div class="mini-profile-info">
-              <p id="sidebarDisplayName">Spotify User</p>
-              <span>Connected with Spotify</span>
-            </div>
-          </div>
-
-          <button id="logoutBtn" class="logout-btn" type="button">
-            Log Out
-          </button>
-        </div>
-      </aside>
-
-      <!-- =========================================
-           MAIN DASHBOARD CONTENT
-      ========================================== -->
-      <div class="dashboard-main">
-        <header class="dashboard-header">
-          <div>
-            <p class="eyebrow">SPOTIFY MUSIC SEARCH</p>
-            <h1>Welcome, <span id="displayName">Spotify User</span></h1>
-
-            <p class="header-description">
-              Search Spotify and discover music from your account.
-            </p>
-          </div>
-
-          <div class="connection-status">
-            <span class="status-dot" aria-hidden="true"></span>
-            Spotify Connected
-          </div>
-        </header>
-
-        <!-- =========================================
-             LOADING / ERROR STATUS
-        ========================================== -->
-        <div
-          id="dashboardStatus"
-          class="dashboard-status hidden"
-          aria-live="polite"
-        ></div>
-
-        <!-- =========================================
-             DASHBOARD SECTION
-        ========================================== -->
-        <section id="dashboardSection" class="content-section">
-          <div class="section-heading">
-            <p class="eyebrow">YOUR DASHBOARD</p>
-            <h2>Music Dashboard</h2>
-
-            <p>Your Spotify account is connected and ready to explore.</p>
-          </div>
-
-          <div class="dashboard-cards">
-            <article class="dashboard-card">
-              <div class="dashboard-card-icon" aria-hidden="true">♫</div>
-
-              <h3>Search Music</h3>
-
-              <p>
-                Search Spotify for songs, artists, and albums using live Spotify
-                data.
-              </p>
-
-              <button
-                id="dashboardSearchBtn"
-                class="card-action-btn"
-                type="button"
-              >
-                Start Searching
-              </button>
-            </article>
-
-            <article class="dashboard-card">
-              <div class="dashboard-card-icon" aria-hidden="true">✓</div>
-
-              <h3>Account Connected</h3>
-
-              <p>
-                You are successfully authenticated and connected to Spotify.
-              </p>
-
-              <div class="connected-badge">
-                <span class="status-dot" aria-hidden="true"></span>
-                Connected
-              </div>
-            </article>
-
-            <article class="dashboard-card">
-              <div class="dashboard-card-icon" aria-hidden="true">★</div>
-
-              <h3>Your Profile</h3>
-
-              <p>
-                Logged in as
-                <strong id="profileDisplayName">Spotify User</strong>.
-              </p>
-
-              <p class="profile-status-text">Spotify authorization active</p>
-            </article>
-          </div>
-        </section>
-
-        <!-- =========================================
-             SEARCH SECTION
-        ========================================== -->
-        <section id="searchSection" class="content-section hidden">
-          <div class="search-section">
-            <div class="section-heading">
-              <p class="eyebrow">DISCOVER MUSIC</p>
-
-              <h2>Search Spotify</h2>
-
-              <p>Find your favorite artists, albums, and songs.</p>
-            </div>
-
-            <form id="searchForm">
-              <label for="searchInput" class="sr-only">Search Spotify</label>
-
-              <input
-                type="text"
-                id="searchInput"
-                placeholder="Search Spotify..."
-                autocomplete="off"
-                required
-              />
-
-              <button type="submit">Search</button>
-            </form>
-          </div>
-
-          <section id="results" class="results-section">
-            <p class="welcome-message">Search for music to get started.</p>
-          </section>
-        </section>
-
-        <!-- =========================================
-             TOP TRACKS SECTION
-        ========================================== -->
-        <section id="topTracksSection" class="content-section hidden">
-          <div class="feature-heading">
-            <div>
-              <p class="eyebrow">YOUR MUSIC</p>
-              <h2>Your Top Tracks</h2>
-              <p class="feature-description">
-                See the songs you've been listening to most on Spotify.
-              </p>
-            </div>
-          </div>
-
-          <div
-            id="topTracksStatus"
-            class="feature-status hidden"
-            aria-live="polite"
-          ></div>
-
-          <div id="topTracksResults" class="results-section">
-            <p class="welcome-message">
-              Select Top Tracks to load your Spotify favorites.
-            </p>
-          </div>
-        </section>
-
-        <!-- =========================================
-             RECENTLY PLAYED SECTION
-        ========================================== -->
-        <section id="recentlyPlayedSection" class="content-section hidden">
-          <div class="feature-heading">
-            <div>
-              <p class="eyebrow">LISTENING HISTORY</p>
-              <h2>Recently Played</h2>
-              <p class="feature-description">
-                View songs you've recently listened to on Spotify.
-              </p>
-            </div>
-          </div>
-
-          <div
-            id="recentlyPlayedStatus"
-            class="feature-status hidden"
-            aria-live="polite"
-          ></div>
-
-          <div id="recentlyPlayedResults" class="results-section">
-            <p class="welcome-message">
-              Select Recently Played to load your listening history.
-            </p>
-          </div>
-        </section>
-      </div>
-    </main>
-
-    <script src="app.js"></script>
-  </body>
-</html>
+    ${ spotifyURL ? `
+    <a
+      href="${escapeHTML(spotifyURL)}"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="spotify-link"
+    >
+      Open in Spotify
+    </a>
+    ` : "" }
+  </div>
+</article>
+`; } /* ====================================================== DISPLAY TRACKS
+====================================================== */ function
+displayTracks( container, tracks, emptyMessage, ) { if (!container) { return; }
+if ( !Array.isArray(tracks) || tracks.length === 0 ) { container.innerHTML = `
+<p class="welcome-message">${escapeHTML(emptyMessage)}</p>
+`; return; } container.innerHTML = `
+<div class="track-grid">
+  ${tracks .map((track) => createTrackCard(track)) .join("")}
+</div>
+`; } /* ====================================================== SPOTIFY SEARCH
+====================================================== */ if (searchForm) {
+searchForm.addEventListener( "submit", async (event) => {
+event.preventDefault(); const searchTerm = searchInput.value.trim(); if
+(!searchTerm) { results.innerHTML = `
+<p class="welcome-message">Please enter an artist, song, or album.</p>
+`; return; } if (!currentUserId) { showLogin( "Please log in with Spotify
+first.", ); return; } results.innerHTML = `
+<p class="welcome-message">Searching Spotify...</p>
+`; try { const response = await fetch(
+`${API_URL}/api/spotify/search/${encodeURIComponent( currentUserId,
+)}?q=${encodeURIComponent(searchTerm)}`, ); const data = await response.json();
+if (!response.ok) { if ( handleExpiredAuthentication(response) ) { return; }
+throw new Error( data.message || "Spotify search failed.", ); } const tracks =
+data.tracks?.items || []; displayTracks( results, tracks, `No songs found for
+"${searchTerm}".`, ); } catch (error) { console.error( "Spotify search failed:",
+error, ); results.innerHTML = `
+<p class="welcome-message error-message">
+  Unable to search Spotify: ${escapeHTML(error.message)}
+</p>
+`; } }, ); } /* ====================================================== LOAD TOP
+TRACKS ====================================================== */ async function
+loadTopTracks() { if (!currentUserId) { showLogin( "Please log in with Spotify
+first.", ); return; } if (topTracksStatus) { topTracksStatus.textContent =
+"Loading your top Spotify tracks..."; topTracksStatus.className =
+"feature-status loading"; } if (topTracksResults) { topTracksResults.innerHTML =
+`
+<p class="welcome-message">Loading your top tracks...</p>
+`; } try { const response = await fetch(
+`${API_URL}/api/spotify/top-tracks/${encodeURIComponent( currentUserId, )}`, );
+const data = await response.json(); if (!response.ok) { if (
+handleExpiredAuthentication(response) ) { return; } throw new Error(
+data.message || data.error || "Unable to load top tracks.", ); } /* Handle the
+different response shapes the backend may return. */ let tracks = []; if
+(Array.isArray(data.items)) { tracks = data.items; } else if
+(Array.isArray(data.tracks)) { tracks = data.tracks; } else if (
+Array.isArray(data.tracks?.items) ) { tracks = data.tracks.items; } if
+(topTracksStatus) { topTracksStatus.textContent = ""; topTracksStatus.className
+= "feature-status hidden"; } displayTracks( topTracksResults, tracks, "No top
+tracks were returned by Spotify.", ); } catch (error) { console.error( "Top
+tracks failed:", error, ); if (topTracksStatus) { topTracksStatus.textContent =
+`Unable to load top tracks: ${error.message}`; topTracksStatus.className =
+"feature-status error"; } if (topTracksResults) { topTracksResults.innerHTML = `
+<p class="welcome-message error-message">
+  Unable to load your top Spotify tracks.
+</p>
+`; } } } /* ====================================================== LOAD RECENTLY
+PLAYED ====================================================== */ async function
+loadRecentlyPlayed() { if (!currentUserId) { showLogin( "Please log in with
+Spotify first.", ); return; } if (recentlyPlayedStatus) {
+recentlyPlayedStatus.textContent = "Loading your recently played tracks...";
+recentlyPlayedStatus.className = "feature-status loading"; } if
+(recentlyPlayedResults) { recentlyPlayedResults.innerHTML = `
+<p class="welcome-message">Loading your listening history...</p>
+`; } try { const response = await fetch(
+`${API_URL}/api/spotify/recently-played/${encodeURIComponent( currentUserId,
+)}`, ); const data = await response.json(); if (!response.ok) { if (
+handleExpiredAuthentication(response) ) { return; } throw new Error(
+data.message || data.error || "Unable to load recently played tracks.", ); } /*
+Recently played data normally contains an array of items where each item has a
+track property. */ let rawItems = []; if (Array.isArray(data.items)) { rawItems
+= data.items; } else if (Array.isArray(data.tracks)) { rawItems = data.tracks; }
+else if ( Array.isArray(data.tracks?.items) ) { rawItems = data.tracks.items; }
+const tracks = rawItems .map((item) => { if (item?.track) { return item.track; }
+return item; }) .filter(Boolean); if (recentlyPlayedStatus) {
+recentlyPlayedStatus.textContent = ""; recentlyPlayedStatus.className =
+"feature-status hidden"; } displayTracks( recentlyPlayedResults, tracks, "No
+recently played tracks were returned by Spotify.", ); } catch (error) {
+console.error( "Recently played tracks failed:", error, ); if
+(recentlyPlayedStatus) { recentlyPlayedStatus.textContent = `Unable to load
+recently played tracks: ${error.message}`; recentlyPlayedStatus.className =
+"feature-status error"; } if (recentlyPlayedResults) {
+recentlyPlayedResults.innerHTML = `
+<p class="welcome-message error-message">
+  Unable to load your recently played Spotify tracks.
+</p>
+`; } } } /* ====================================================== ESCAPE HTML
+====================================================== */ function
+escapeHTML(value) { const element = document.createElement("div");
+element.textContent = String(value ?? ""); return element.innerHTML; } /*
+====================================================== START APPLICATION
+====================================================== */ checkAuthentication();
