@@ -13,6 +13,7 @@ const loginButton = document.getElementById("spotifyLoginBtn");
 const logoutButton = document.getElementById("logoutBtn");
 
 const authStatus = document.getElementById("loginStatus");
+
 const displayName = document.getElementById("displayName");
 const sidebarDisplayName = document.getElementById("sidebarDisplayName");
 const profileDisplayName = document.getElementById("profileDisplayName");
@@ -30,6 +31,7 @@ const topTracksStatus = document.getElementById("topTracksStatus");
 const topTracksResults = document.getElementById("topTracksResults");
 
 const recentlyPlayedStatus = document.getElementById("recentlyPlayedStatus");
+
 const recentlyPlayedResults = document.getElementById("recentlyPlayedResults");
 
 const navLinks = document.querySelectorAll(".nav-link");
@@ -48,7 +50,7 @@ let currentUserId = null;
 
 /*
 ======================================================
-SHOW LOGIN SCREEN
+LOGIN SCREEN
 ======================================================
 */
 
@@ -68,7 +70,7 @@ function showLogin(message = "") {
 
 /*
 ======================================================
-SHOW MAIN APPLICATION
+MAIN APPLICATION
 ======================================================
 */
 
@@ -81,7 +83,8 @@ function showApp(user) {
     appPage.classList.remove("hidden");
   }
 
-  const userName = user?.displayName || "Spotify User";
+  const userName =
+    user?.displayName || user?.display_name || user?.name || "Spotify User";
 
   if (displayName) {
     displayName.textContent = userName;
@@ -110,6 +113,7 @@ function showDashboardStatus(message, type = "loading") {
   }
 
   dashboardStatus.textContent = message;
+
   dashboardStatus.className = `dashboard-status ${type}`;
 }
 
@@ -119,18 +123,20 @@ function hideDashboardStatus() {
   }
 
   dashboardStatus.textContent = "";
+
   dashboardStatus.className = "dashboard-status hidden";
 }
 
 /*
 ======================================================
-NAVIGATION HELPERS
+NAVIGATION
 ======================================================
 */
 
 function setActiveNavigation(sectionName) {
   navLinks.forEach((link) => {
     const isActive = link.dataset.section === sectionName;
+
     link.classList.toggle("active", isActive);
   });
 }
@@ -167,6 +173,8 @@ function showDashboard() {
   }
 
   setActiveNavigation("dashboard");
+
+  hideDashboardStatus();
 }
 
 /*
@@ -183,6 +191,8 @@ function showSearch() {
   }
 
   setActiveNavigation("search");
+
+  hideDashboardStatus();
 
   if (searchInput) {
     searchInput.focus();
@@ -202,7 +212,9 @@ function showTopTracks() {
     topTracksSection.classList.remove("hidden");
   }
 
-  setActiveNavigation("top-tracks");
+  setActiveNavigation("topTracks");
+
+  hideDashboardStatus();
 
   loadTopTracks();
 }
@@ -220,7 +232,9 @@ function showRecentlyPlayed() {
     recentlyPlayedSection.classList.remove("hidden");
   }
 
-  setActiveNavigation("recently-played");
+  setActiveNavigation("recentlyPlayed");
+
+  hideDashboardStatus();
 
   loadRecentlyPlayed();
 }
@@ -245,16 +259,22 @@ navLinks.forEach((link) => {
       return;
     }
 
-    if (section === "top-tracks") {
+    if (section === "topTracks") {
       showTopTracks();
       return;
     }
 
-    if (section === "recently-played") {
+    if (section === "recentlyPlayed") {
       showRecentlyPlayed();
     }
   });
 });
+
+/*
+======================================================
+DASHBOARD SEARCH BUTTON
+======================================================
+*/
 
 if (dashboardSearchBtn) {
   dashboardSearchBtn.addEventListener("click", () => {
@@ -270,7 +290,13 @@ GET USER ID
 
 function getUserId() {
   const params = new URLSearchParams(window.location.search);
+
   const urlUserId = params.get("userId");
+
+  /*
+  If Spotify redirected back with a userId,
+  save it so the user remains logged in.
+  */
 
   if (urlUserId) {
     localStorage.setItem("spotifyUserId", urlUserId);
@@ -279,6 +305,10 @@ function getUserId() {
 
     return urlUserId;
   }
+
+  /*
+  Otherwise use the saved userId.
+  */
 
   return localStorage.getItem("spotifyUserId");
 }
@@ -302,8 +332,6 @@ async function checkAuthentication() {
       authStatus.textContent = "Checking authentication...";
     }
 
-    showDashboardStatus("Loading your Spotify dashboard...", "loading");
-
     const response = await fetch(
       `${API_URL}/auth/status/${encodeURIComponent(currentUserId)}`,
       {
@@ -315,22 +343,17 @@ async function checkAuthentication() {
 
     if (response.ok && data.authenticated === true) {
       showApp(data.user);
-      hideDashboardStatus();
+
       return;
     }
 
     localStorage.removeItem("spotifyUserId");
-    currentUserId = null;
 
-    hideDashboardStatus();
+    currentUserId = null;
 
     showLogin("Your session has expired. Please log in again.");
   } catch (error) {
     console.error("Authentication check failed:", error);
-
-    currentUserId = null;
-
-    hideDashboardStatus();
 
     showLogin(
       "Unable to verify authentication. Make sure the server is running.",
@@ -406,128 +429,8 @@ if (logoutButton) {
       `;
     }
 
-    showDashboard();
     showLogin("You have been logged out.");
   });
-}
-
-/*
-======================================================
-HANDLE EXPIRED AUTHENTICATION
-======================================================
-*/
-
-function handleExpiredAuthentication(response) {
-  if (response.status !== 401 && response.status !== 403) {
-    return false;
-  }
-
-  localStorage.removeItem("spotifyUserId");
-  currentUserId = null;
-
-  showLogin("Your Spotify session has expired. Please log in again.");
-
-  return true;
-}
-
-/*
-======================================================
-CREATE TRACK CARD
-======================================================
-*/
-
-function createTrackCard(track) {
-  const image = track?.album?.images?.[0]?.url || "";
-
-  const artists =
-    track?.artists?.map((artist) => artist.name).join(", ") || "Unknown Artist";
-
-  const albumName = track?.album?.name || "Unknown Album";
-
-  const spotifyURL = track?.external_urls?.spotify || "";
-
-  const trackName = track?.name || "Unknown Track";
-
-  return `
-    <article class="track-card">
-
-      ${
-        image
-          ? `
-            <img
-              src="${escapeHTML(image)}"
-              alt="${escapeHTML(trackName)} album cover"
-              class="track-image"
-            />
-          `
-          : `
-            <div class="track-image-placeholder">
-              ♫
-            </div>
-          `
-      }
-
-      <div class="track-info">
-
-        <h3>${escapeHTML(trackName)}</h3>
-
-        <p>
-          <strong>Artist:</strong>
-          ${escapeHTML(artists)}
-        </p>
-
-        <p>
-          <strong>Album:</strong>
-          ${escapeHTML(albumName)}
-        </p>
-
-        ${
-          spotifyURL
-            ? `
-              <a
-                href="${escapeHTML(spotifyURL)}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="spotify-link"
-              >
-                Open in Spotify
-              </a>
-            `
-            : ""
-        }
-
-      </div>
-
-    </article>
-  `;
-}
-
-/*
-======================================================
-DISPLAY TRACKS
-======================================================
-*/
-
-function displayTracks(container, tracks, emptyMessage) {
-  if (!container) {
-    return;
-  }
-
-  if (!Array.isArray(tracks) || tracks.length === 0) {
-    container.innerHTML = `
-      <p class="welcome-message">
-        ${escapeHTML(emptyMessage)}
-      </p>
-    `;
-
-    return;
-  }
-
-  container.innerHTML = `
-    <div class="track-grid">
-      ${tracks.map((track) => createTrackCard(track)).join("")}
-    </div>
-  `;
 }
 
 /*
@@ -553,7 +456,12 @@ if (searchForm) {
     }
 
     if (!currentUserId) {
-      showLogin("Please log in with Spotify first.");
+      results.innerHTML = `
+        <p class="welcome-message">
+          Please log in with Spotify first.
+        </p>
+      `;
+
       return;
     }
 
@@ -573,21 +481,27 @@ if (searchForm) {
       const data = await response.json();
 
       if (!response.ok) {
-        if (handleExpiredAuthentication(response)) {
-          return;
-        }
-
         throw new Error(data.message || "Spotify search failed.");
       }
 
       const tracks = data.tracks?.items || [];
 
-      displayTracks(results, tracks, `No songs found for "${searchTerm}".`);
+      if (tracks.length === 0) {
+        results.innerHTML = `
+          <p class="welcome-message">
+            No songs found for "${escapeHTML(searchTerm)}".
+          </p>
+        `;
+
+        return;
+      }
+
+      results.innerHTML = buildTrackGrid(tracks);
     } catch (error) {
       console.error("Spotify search failed:", error);
 
       results.innerHTML = `
-        <p class="welcome-message error-message">
+        <p class="welcome-message">
           Unable to search Spotify:
           ${escapeHTML(error.message)}
         </p>
@@ -603,24 +517,31 @@ LOAD TOP TRACKS
 */
 
 async function loadTopTracks() {
+  if (!topTracksResults) {
+    return;
+  }
+
   if (!currentUserId) {
-    showLogin("Please log in with Spotify first.");
+    topTracksResults.innerHTML = `
+      <p class="welcome-message">
+        Please log in with Spotify first.
+      </p>
+    `;
+
     return;
   }
 
   if (topTracksStatus) {
-    topTracksStatus.textContent = "Loading your top Spotify tracks...";
+    topTracksStatus.textContent = "Loading your top tracks...";
 
-    topTracksStatus.className = "feature-status loading";
+    topTracksStatus.className = "feature-status";
   }
 
-  if (topTracksResults) {
-    topTracksResults.innerHTML = `
-      <p class="welcome-message">
-        Loading your top tracks...
-      </p>
-    `;
-  }
+  topTracksResults.innerHTML = `
+    <p class="welcome-message">
+      Loading your top tracks...
+    </p>
+  `;
 
   try {
     const response = await fetch(
@@ -630,11 +551,7 @@ async function loadTopTracks() {
     const data = await response.json();
 
     if (!response.ok) {
-      if (handleExpiredAuthentication(response)) {
-        return;
-      }
-
-      throw new Error(data.message || "Unable to load top tracks.");
+      throw new Error(data.message || "Unable to load your top tracks.");
     }
 
     /*
@@ -642,44 +559,48 @@ async function loadTopTracks() {
     { items: [...] }
 
     or:
+
     { tracks: { items: [...] } }
 
     or:
+
     { tracks: [...] }
     */
 
-    const tracks = Array.isArray(data.items)
-      ? data.items
-      : Array.isArray(data.tracks)
-        ? data.tracks
-        : data.tracks?.items || [];
+    const tracks = data.items || data.tracks?.items || data.tracks || [];
 
     if (topTracksStatus) {
       topTracksStatus.textContent = "";
+
       topTracksStatus.className = "feature-status hidden";
     }
 
-    displayTracks(
-      topTracksResults,
-      tracks,
-      "No top tracks were returned by Spotify.",
-    );
-  } catch (error) {
-    console.error("Top tracks failed:", error);
-
-    if (topTracksStatus) {
-      topTracksStatus.textContent = `Unable to load top tracks: ${error.message}`;
-
-      topTracksStatus.className = "feature-status error";
-    }
-
-    if (topTracksResults) {
+    if (!Array.isArray(tracks) || tracks.length === 0) {
       topTracksResults.innerHTML = `
-        <p class="welcome-message error-message">
-          Unable to load your top Spotify tracks.
+        <p class="welcome-message">
+          No top tracks are available for this Spotify account yet.
         </p>
       `;
+
+      return;
     }
+
+    topTracksResults.innerHTML = buildTrackGrid(tracks);
+  } catch (error) {
+    console.error("Top tracks request failed:", error);
+
+    if (topTracksStatus) {
+      topTracksStatus.textContent = "";
+
+      topTracksStatus.className = "feature-status hidden";
+    }
+
+    topTracksResults.innerHTML = `
+      <p class="welcome-message">
+        Unable to load Top Tracks:
+        ${escapeHTML(error.message)}
+      </p>
+    `;
   }
 }
 
@@ -690,24 +611,31 @@ LOAD RECENTLY PLAYED
 */
 
 async function loadRecentlyPlayed() {
+  if (!recentlyPlayedResults) {
+    return;
+  }
+
   if (!currentUserId) {
-    showLogin("Please log in with Spotify first.");
+    recentlyPlayedResults.innerHTML = `
+      <p class="welcome-message">
+        Please log in with Spotify first.
+      </p>
+    `;
+
     return;
   }
 
   if (recentlyPlayedStatus) {
-    recentlyPlayedStatus.textContent = "Loading your recently played tracks...";
+    recentlyPlayedStatus.textContent = "Loading recently played tracks...";
 
-    recentlyPlayedStatus.className = "feature-status loading";
+    recentlyPlayedStatus.className = "feature-status";
   }
 
-  if (recentlyPlayedResults) {
-    recentlyPlayedResults.innerHTML = `
-      <p class="welcome-message">
-        Loading your listening history...
-      </p>
-    `;
-  }
+  recentlyPlayedResults.innerHTML = `
+    <p class="welcome-message">
+      Loading your recently played tracks...
+    </p>
+  `;
 
   try {
     const response = await fetch(
@@ -719,64 +647,157 @@ async function loadRecentlyPlayed() {
     const data = await response.json();
 
     if (!response.ok) {
-      if (handleExpiredAuthentication(response)) {
-        return;
-      }
-
       throw new Error(data.message || "Unable to load recently played tracks.");
     }
 
     /*
-    Spotify recently played usually returns items
-    shaped like:
+    Spotify's recently-played endpoint normally returns:
 
     {
-      track: {
-        name: "...",
-        album: {...},
-        artists: [...]
-      }
+      items: [
+        {
+          track: {...},
+          played_at: "..."
+        }
+      ]
     }
 
-    Convert those items into normal track objects
-    so we can reuse the same track cards.
+    Convert those objects into regular track objects so the
+    same reusable card component can display them.
     */
 
-    const rawItems = Array.isArray(data.items)
-      ? data.items
-      : Array.isArray(data.tracks)
-        ? data.tracks
-        : data.tracks?.items || [];
+    const rawItems = data.items || data.tracks?.items || data.tracks || [];
 
-    const tracks = rawItems.map((item) => item?.track || item).filter(Boolean);
+    const tracks = Array.isArray(rawItems)
+      ? rawItems.map((item) => item.track || item).filter(Boolean)
+      : [];
 
     if (recentlyPlayedStatus) {
       recentlyPlayedStatus.textContent = "";
+
       recentlyPlayedStatus.className = "feature-status hidden";
     }
 
-    displayTracks(
-      recentlyPlayedResults,
-      tracks,
-      "No recently played tracks were returned by Spotify.",
-    );
-  } catch (error) {
-    console.error("Recently played tracks failed:", error);
-
-    if (recentlyPlayedStatus) {
-      recentlyPlayedStatus.textContent = `Unable to load recently played tracks: ${error.message}`;
-
-      recentlyPlayedStatus.className = "feature-status error";
-    }
-
-    if (recentlyPlayedResults) {
+    if (tracks.length === 0) {
       recentlyPlayedResults.innerHTML = `
-        <p class="welcome-message error-message">
-          Unable to load your recently played Spotify tracks.
+        <p class="welcome-message">
+          No recently played tracks are available yet.
         </p>
       `;
+
+      return;
     }
+
+    recentlyPlayedResults.innerHTML = buildTrackGrid(tracks);
+  } catch (error) {
+    console.error("Recently played request failed:", error);
+
+    if (recentlyPlayedStatus) {
+      recentlyPlayedStatus.textContent = "";
+
+      recentlyPlayedStatus.className = "feature-status hidden";
+    }
+
+    recentlyPlayedResults.innerHTML = `
+      <p class="welcome-message">
+        Unable to load Recently Played:
+        ${escapeHTML(error.message)}
+      </p>
+    `;
   }
+}
+
+/*
+======================================================
+REUSABLE TRACK GRID
+======================================================
+*/
+
+function buildTrackGrid(tracks) {
+  if (!Array.isArray(tracks) || tracks.length === 0) {
+    return `
+      <p class="welcome-message">
+        No tracks are available.
+      </p>
+    `;
+  }
+
+  return `
+    <div class="track-grid">
+
+      ${tracks
+        .map((track) => {
+          const trackName = track?.name || "Unknown Track";
+
+          const image = track?.album?.images?.[0]?.url || "";
+
+          const artists =
+            track?.artists?.map((artist) => artist.name).join(", ") ||
+            "Unknown Artist";
+
+          const albumName = track?.album?.name || "Unknown Album";
+
+          const spotifyURL = track?.external_urls?.spotify || "";
+
+          return `
+            <article class="track-card">
+
+              ${
+                image
+                  ? `
+                    <img
+                      src="${escapeHTML(image)}"
+                      alt="${escapeHTML(trackName)} album cover"
+                      class="track-image"
+                    />
+                  `
+                  : `
+                    <div class="track-image track-image-placeholder">
+                      ♫
+                    </div>
+                  `
+              }
+
+              <div class="track-info">
+
+                <h3>
+                  ${escapeHTML(trackName)}
+                </h3>
+
+                <p>
+                  <strong>Artist:</strong>
+                  ${escapeHTML(artists)}
+                </p>
+
+                <p>
+                  <strong>Album:</strong>
+                  ${escapeHTML(albumName)}
+                </p>
+
+                ${
+                  spotifyURL
+                    ? `
+                      <a
+                        href="${escapeHTML(spotifyURL)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="spotify-link"
+                      >
+                        Open in Spotify
+                      </a>
+                    `
+                    : ""
+                }
+
+              </div>
+
+            </article>
+          `;
+        })
+        .join("")}
+
+    </div>
+  `;
 }
 
 /*
