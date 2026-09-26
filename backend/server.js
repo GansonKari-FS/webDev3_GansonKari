@@ -555,21 +555,121 @@ app.get("/api/spotify/top-tracks/:userId", async (req, res) => {
 
     const accessToken = await getValidSpotifyAccessToken(user);
 
-    const response = await axios.get(
-      "https://api.spotify.com/v1/me/top/tracks",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    /*
+      Spotify supports three time ranges:
+      medium_term
+      short_term
+      long_term
+
+      Try each one before deciding that
+      Spotify has no Top Tracks data.
+      */
+
+    const timeRanges = ["medium_term", "short_term", "long_term"];
+
+    for (const timeRange of timeRanges) {
+      const response = await axios.get(
+        "https://api.spotify.com/v1/me/top/tracks",
+        {
+          headers: headers,
+
+          params: {
+            limit: 10,
+            time_range: timeRange,
+          },
         },
+      );
+
+      if (
+        Array.isArray(response.data?.items) &&
+        response.data.items.length > 0
+      ) {
+        console.log(`Top Tracks loaded from Spotify using ${timeRange}.`);
+
+        return res.status(200).json({
+          ...response.data,
+          source: "spotify_top_tracks",
+          timeRange: timeRange,
+        });
+      }
+    }
+
+    /*
+      FALLBACK
+
+      If Spotify has not generated
+      personalized Top Tracks yet,
+      use actual Recently Played data.
+
+      We count repeated songs and
+      return the most frequently played
+      recent tracks.
+      */
+
+    console.log(
+      "Spotify returned no Top Tracks. Trying Recently Played fallback...",
+    );
+
+    const recentResponse = await axios.get(
+      "https://api.spotify.com/v1/me/player/recently-played",
+      {
+        headers: headers,
 
         params: {
-          limit: 10,
-          time_range: "medium_term",
+          limit: 50,
         },
       },
     );
 
-    return res.status(200).json(response.data);
+    const recentItems = Array.isArray(recentResponse.data?.items)
+      ? recentResponse.data.items
+      : [];
+
+    const trackCounts = new Map();
+
+    for (const item of recentItems) {
+      const track = item?.track;
+
+      if (!track?.id) {
+        continue;
+      }
+
+      const existing = trackCounts.get(track.id);
+
+      if (existing) {
+        existing.count += 1;
+      } else {
+        trackCounts.set(track.id, {
+          track: track,
+          count: 1,
+        });
+      }
+    }
+
+    const fallbackTracks = Array.from(trackCounts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((entry) => entry.track);
+
+    console.log(
+      `Top Tracks fallback returned ${fallbackTracks.length} track(s).`,
+    );
+
+    return res.status(200).json({
+      items: fallbackTracks,
+      total: fallbackTracks.length,
+      limit: 10,
+      offset: 0,
+      next: null,
+      previous: null,
+      href: null,
+      source: "recently_played_fallback",
+      timeRange: null,
+    });
   } catch (error) {
     console.error(
       "Spotify top tracks error:",
@@ -677,6 +777,7 @@ app.get("/api/spotify/search/:userId", async (req, res) => {
 
     return res.status(error.response?.status || 500).json({
       message: "Unable to search Spotify.",
+
       error: error.response?.data || error.message,
     });
   }
